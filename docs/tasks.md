@@ -3,6 +3,12 @@
 > 本檔由 [`plan.md`](plan.md) 推導而來。**`plan.md` 是唯一權威**；若兩者衝突，以 `plan.md` 為準，並回頭修正本檔。
 > 技術依據與查證來源見 [`research.md`](research.md)。
 
+> ## 🚧 2026-09-10 範圍調整
+> 現有帳號**無 GitHub Organization 層級權限**，專案落在個人公開 repo。
+> **Act 3（管理者視角）暫緩**，Demo 改走兩幕版。受影響的任務已標記 🚧，
+> 規格完整保留，取得組織權限後直接啟用。
+> 詳見 [`plan.md` 3.6 節](plan.md#36-能力可用性與目前限制)。
+
 ## 使用方式
 
 - 任務編號：`T-{Phase}{序號}`，例如 `T-201`。
@@ -19,11 +25,11 @@
 | 1 | 骨架 | 9 | 2 天 | ⬜ 未開始 |
 | 2 | 遊戲核心（乾淨版） | 14 | 5 天 | ⬜ 未開始 |
 | 3 | 植入弱點 | 12 | 3 天 | ⬜ 未開始 |
-| 4 | GitHub 平台設定與驗證 | 11 | 2 天 | ⬜ 未開始 |
+| 4 | GitHub 平台設定與驗證 | 11（1 項 🚧 暫緩） | 2 天 | ⬜ 未開始 |
 | 5 | Demo 資產 | 8 | 3 天 | ⬜ 未開始 |
 | 6 | 彩排 | 5 | 2 天 | ⬜ 未開始 |
 | 7 | 交付 | 4 | 1 天 | ⬜ 未開始 |
-| | **合計** | **68** | **18.5 天** | |
+| | **合計** | **68**（實作 67，🚧 暫緩 1） | **18.5 天** | |
 
 ---
 
@@ -32,24 +38,32 @@
 > commit 前綴：`chore:`
 > **這個 Phase 不寫程式，但它決定後面哪些功能演得出來。不要跳過。**
 
-### ⬜ T-001 確認 GitHub 授權與方案
+### 🟡 T-001 確認 GitHub 授權與方案（部分完成）
 - **依賴**：無
-- **內容**：確認 GitHub 方案（Enterprise Cloud / Team）、是否具備 GitHub Secret Protection 與 GitHub Code Security 授權、Copilot 授權層級（Business / Enterprise）。若無，申請試用。
-- **DoD**：在 `docs/GHAS-SETUP.md` 中記錄實際方案與可用功能清單；`plan.md` 第 3 節的 38 個能力觸點逐一標記「可用 / 不可用 / 需試用」。
-- **⚠️ 這是阻斷性任務**：Copilot Code Review、Coding Agent、Security Campaign 的可用性直接決定 Act 2、Act 3 能否成立。
+- **內容**：確認 GitHub 方案、是否具備 GitHub Secret Protection 與 GitHub Code Security 授權、Copilot 授權層級。
+- **2026-09-10 已確認**：個人帳號，**無組織層級權限** → Act 3 暫緩（`plan.md` 3.6 節已記錄）。
+  公開 repo 可免費使用 CodeQL、Copilot Autofix、Dependabot。
+- **仍待確認**：Copilot 授權層級（Business / Enterprise）→ 決定 Copilot Code Review（P3）能否演。
+- **DoD**：在 `docs/GHAS-SETUP.md` 中記錄實際方案與可用功能清單；`plan.md` 3.6 節的可用性表格經 Phase 4 實測後回填。
+- **⚠️ 這是阻斷性任務**：Copilot Code Review 的可用性直接決定 Act 2 能否成立。
 
-### ⬜ T-002 建立 Demo 組織與 Repository
+### ✅ T-002 建立 Repository（2026-09-10 完成）
 - **依賴**：T-001
-- **內容**：建立專用 GitHub Organization（避免污染正式組織）；建立 repo，可見性設為 **Internal**（或 Private）。
-- **DoD**：repo 已建立，可見性正確，`README.md` 首屏警語就位。
+- **原內容**：建立專用 GitHub Organization；建立 repo，可見性設為 Internal 或 Private。
+- **實際做法**：🚧 無組織權限 → 建於個人帳號 `jeff1121/GitHub-Advanced-Security-DEMO`，
+  可見性設為 **Public**（判定無機密性，且公開 repo 才有免費的 Autofix 與 CodeQL）。
+- **DoD**：✅ repo 已建立、✅ 可見性為 Public、✅ `README.md` 首屏警語就位、✅ `SECURITY-DEMO-NOTICE.md` 就位。
+- **⚠️ Phase 3 開工前須重新確認可見性**：屆時 58 條弱點與合成憑證會全部公開，見 `plan.md` 第 18 節第 7 點。
 
 ### ⬜ T-003 確認 Azure 訂閱與 Mock 決策
 - **依賴**：無
 - **內容**：確認是否有可用 Azure 訂閱。若無，確認全面採用 `MOCK_AZURE=true` 模式。
 - **DoD**：`docs/AZURE-SETUP.md` 記錄決策；若採 Mock，明確標註哪些 Demo 橋段不受影響（提示：Secret Scanning 完全不受影響）。
 
-### ⬜ T-004 回答 plan.md 第 18 節的 7 個待確認事項
+### 🟡 T-004 回答 plan.md 第 18 節的 7 個待確認事項（2/7 已答）
 - **依賴**：T-001、T-003
+- **已答**：第 1 項（GitHub 方案：個人帳號無組織權限）、第 7 項（可見性：Public）。
+- **待答**：第 2–6 項（Copilot 授權層級、Azure 訂閱、目標客戶產業、Demo 語言、是否需投影片）。
 - **DoD**：7 項全部有明確答案並回填 `plan.md` 第 18 節。
 
 ### ⬜ T-005 建立憑證合規檢查流程
@@ -297,10 +311,14 @@
 > commit 前綴：`ci:` / `chore:`
 > **本 Phase 的核心不是「設定」，是「驗證每個 alert 真的出現」。**
 
-### ⬜ T-401 建立組織層級 Security Configuration
+### 🚧 T-401 建立組織層級 Security Configuration（暫緩，改為 repo 層級手動啟用）
 - **依賴**：T-001、Phase 3 完成
-- **內容**：依 `plan.md` 13.5 建立 `bingo-demo-baseline` 設定檔並套用到 repo。
-- **DoD**：repo 的 Security 頁籤顯示所有功能已啟用。
+- **原內容**：依 `plan.md` 13.5 建立 `bingo-demo-baseline` 組織設定檔並套用到 repo。
+- **🚧 暫緩原因**：Security Configuration 是組織層級功能，現有帳號無權限。
+- **替代做法**：到 repo 的 **Settings → Code security** 逐項手動啟用 `plan.md` 13.5 表格中的每一項
+  （Secret Scanning、Push Protection、Validity Checks、AI 通用密碼偵測、Code Scanning、
+  Dependabot Alerts、Dependabot Security Updates、Private Vulnerability Reporting）。
+- **DoD**：repo 的 Security 頁籤顯示上述功能全部已啟用（逐一截圖存證，供日後轉移組織時比對）。
 
 ### ⬜ T-402 啟用 Secret Scanning 並驗證存量 alert
 - **依賴**：T-401
@@ -316,7 +334,10 @@
 ### ⬜ T-404 建立自訂 Secret Scanning Pattern 並 dry run
 - **依賴**：T-402
 - **內容**：依 `plan.md` 13.6 建立 pattern，先在 repo 層級 dry run，確認能命中 SEC-08 且無誤報後才發布，再啟用 push protection。
+- **❓ 待驗證**：公開 repo 上使用**自訂 pattern** 是否需要 Secret Protection 授權（`plan.md` 3.6 節 ❓ 表格）。
+  若不可用，S3 橋段改為口述 + 截圖，並把時間補進 Act 1 的歷史洩漏掃描段落。
 - **DoD**：dry run 命中 SEC-08；發布後產生 alert；push protection 已對此 pattern 啟用。
+  若確認不可用，在 `plan.md` 3.6 節與 `research.md` 記錄結論。
 
 ### ⬜ T-405 啟用 Push Protection 並實測阻擋
 - **依賴**：T-404
@@ -332,7 +353,11 @@
 ### ⬜ T-407 驗證 Copilot Autofix 可用性
 - **依賴**：T-406
 - **內容**：對 BE-01、FE-01、BE-03、BE-07、BE-13、AZ-03 逐一點開 Autofix，記錄實際產出的修復內容與品質。
-- **DoD**：**≥ 6 個** alert 能產生合理修復；每個的實際輸出截圖存檔（供 Phase 5 主持稿使用，也作為 R5 的準備）。
+- **❓ 併入驗證 C5**：測試**批次指派多個 alert 給 Copilot** 是否需要組織層級的 security campaign。
+  Campaign 已確定不可用；若 code scanning backlog 的批次路徑也不可用，
+  Act 2 收尾改為「單一 alert 指派給 Copilot」，主持稿需備兩套講法（`plan.md` 3.6 節）。
+- **DoD**：**≥ 6 個** alert 能產生合理修復；每個的實際輸出截圖存檔（供 Phase 5 主持稿使用，也作為 R5 的準備）；
+  C5 的可用性有明確結論並回填 `plan.md` 3.6 節。
 
 ### ⬜ T-408 建立 Dependabot 設定並驗證 alert
 - **依賴**：T-401、T-307
@@ -360,6 +385,8 @@
 - [ ] Push Protection 連續 3 次實測都被擋下
 - [ ] Autofix 可用數 ≥ 6
 - [ ] `verify-alerts.sh` 全綠
+- [ ] 🚧 T-401 已改用 repo 層級手動啟用，並截圖存證
+- [ ] ❓ C5（批次指派 Copilot）與 S3（自訂 pattern）的可用性已實測並回填 `plan.md` 3.6 節
 - [ ] **建立 tag `demo-baseline-v1`**
 
 ---
@@ -368,13 +395,17 @@
 
 > commit 前綴：`docs:` / `chore:`
 
-### ⬜ T-501 撰寫 `docs/DEMO-SCRIPT.md`（60 分鐘完整版）
+### ⬜ T-501 撰寫 `docs/DEMO-SCRIPT.md`（45 分鐘兩幕版）
 - **依賴**：Phase 4 完成
-- **內容**：依 `plan.md` 4.4 的六項要求，為三幕的每個橋段撰寫逐字稿、操作步驟、預期畫面、痛點對應句、常見提問、Plan B。
+- **內容**：依 `plan.md` 4.4 的六項要求，為 **4.1b 兩幕版**的每個橋段撰寫逐字稿、操作步驟、預期畫面、痛點對應句、常見提問、Plan B。
+- **🚧 注意**：Act 3 暫緩，**不要寫**組織層級的橋段。改為納入：
+  - 給 CISO 受眾的補償話術（把「需要組織層級授權」轉成銷售論點，見 `plan.md` 4.1b）
+  - C5 兩套講法（批次指派 / 單一指派），依 T-407 的實測結果擇一為主、另一為備案
 - **DoD**：一位**非工程背景**的同仁照著唸與操作，能完整走完全程。
 
 ### ⬜ T-502 撰寫 30 分鐘與 15 分鐘版本
 - **依賴**：T-501
+- **內容**：30 分鐘版依 `plan.md` 4.2（已移除 Security Overview 段落）；15 分鐘攤位版依 4.3（不受影響）。
 - **DoD**：兩個版本各自計時實測，誤差在 ±3 分鐘內。
 
 ### ⬜ T-503 撰寫 `scripts/reset-demo.sh`
@@ -384,7 +415,7 @@
 
 ### ⬜ T-504 建立 Template Repository 流程
 - **依賴**：T-503
-- **內容**：將 repo 設為 Template；撰寫「每場 Demo 從範本開新 repo」的操作步驟（`plan.md` 14.2 建議的做法）。
+- **內容**：將 repo 設為 Template；撰寫「每場 Demo 從範本開新 repo」的操作步驟（`plan.md` 14.2 建議的做法）。**Template Repository 個人帳號同樣支援，不受組織權限限制。**
 - **DoD**：實測從範本開一個新 repo，套用 Security Configuration 後，所有 alert 在 15 分鐘內重新出現。
 
 ### ⬜ T-505 截圖包
