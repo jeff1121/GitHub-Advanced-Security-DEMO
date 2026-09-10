@@ -245,14 +245,53 @@
 
 | # | 問題 | 何時需要答案 | 影響 |
 |---|---|---|---|
-| Q1 | 組織是舊版 GHAS 授權還是新的分離式產品？ | T-001 | 設定畫面與報價話術不同（R-01） |
-| Q2 | Copilot 授權是 Business 還是 Enterprise？ | T-001 | 決定 Code Review 與 Coding Agent 能否演（Act 2、Act 3 的核心） |
-| Q3 | Repo 要 Public 還是 Internal？ | T-002 | Public 才有免費 Autofix，但有外流風險。**建議 Internal** |
+| ~~Q1~~ | ~~組織是舊版 GHAS 授權還是新的分離式產品？~~ | ~~T-001~~ | ✅ **2026-09-10 已答：沒有組織**。個人帳號，無組織層級權限。見 R-12 |
+| Q2 | Copilot 授權是 Business 還是 Enterprise？ | T-001 | 決定 Code Review 與 Coding Agent 能否演（Act 2 的核心） |
+| ~~Q3~~ | ~~Repo 要 Public 還是 Internal？~~ | ~~T-002~~ | ✅ **2026-09-10 已答：Public**。判定無機密性；換得免費的 CodeQL／Autofix／Dependabot。見 R-12 |
 | Q4 | 有無 Azure 訂閱？ | T-003 | 決定是否全面採用 Mock 模式 |
 | Q5 | 目標客戶產業？ | T-004 | 決定要不要做產業客製換皮 |
 | Q6 | `security` 與 `security-extended` 兩個 suite 的實際 alert 數量差多少？ | T-406 | 差異本身是 Demo 素材；也決定要不要用 `threat-models: local` |
 | Q7 | 自訂 pattern 的誤報率是否低到可以開 push protection？ | T-404 | 誤報高就不能開，S3 橋段要改寫 |
 | Q8 | Copilot Coding Agent 對 25 個 alert 的實際處理品質如何？ | T-407 | 若品質不佳，Act 3 高潮要換成別的橋段 |
+
+---
+
+## R-12 🚧 環境限制：無組織層級權限（2026-09-10）
+
+**狀態：已確定的環境約束，非待查問題。**
+
+現有帳號**無法取得 GitHub Organization 層級權限**。專案落在個人帳號的公開 repo
+`jeff1121/GitHub-Advanced-Security-DEMO`。
+
+### 被擋住的能力
+
+Security Overview（組織儀表板）、Security Configurations、Security Campaign、
+Push Protection 的 bypass 稽核設定——這四項都是**組織層級功能**，
+而它們正好構成 `plan.md` Act 3 的全部內容，因此 **Act 3 整幕暫緩**。
+
+### 仍然可用的能力
+
+`plan.md` 3.6 節有完整清單。關鍵事實是：
+
+- **Act 1 與 Act 2 完全不受影響**，而整場 Demo 的兩個高潮
+  （Push Protection 當場阻擋、Copilot Autofix 一鍵修復）都在這兩幕裡。
+- **公開 repo 上 CodeQL、Copilot Autofix、Dependabot 皆免費**（R-02 已查證 Autofix 對公開 repo 預設可用）。
+  這反而讓 Phase 4 可以不等 GHAS 授權就先開跑，把驗證時程往前拉。
+
+### 兩個尚未查證、必須實測的邊界
+
+| # | 問題 | 為何不確定 | 驗證任務 |
+|---|---|---|---|
+| Q9 | 批次指派 25 個 alert 給 Copilot，是否只能從組織層級的 security campaign 進入？ | R-02 引用的官方文件寫「從 code scanning backlog **或** security campaign」批次指派。campaign 已確定不可用；**backlog 這條路徑是不是 repo 層級功能，文件沒說清楚** | T-407 |
+| Q10 | 公開 repo 使用**自訂 secret scanning pattern** 是否需要 Secret Protection 授權？ | R-05 已查證自訂 pattern 可設在 repo 層級，但**授權門檻未查證**。公開 repo 的基本 secret scanning 免費，不代表自訂 pattern 也免費 | T-404 |
+
+**兩者都有備案**（見 `plan.md` 3.6 節），所以不構成阻斷，但實測結果會改變主持稿寫法，
+因此必須在 Phase 5 撰寫主持稿**之前**完成驗證。
+
+### 解封條件
+
+把 repo 轉移到 GitHub Organization。`plan.md` 中標記 🚧 的段落都保留了完整規格，
+屆時直接啟用即可，不需要重新設計。
 
 ---
 

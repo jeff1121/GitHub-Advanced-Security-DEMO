@@ -1,6 +1,6 @@
 # BingoBlitz — GitHub Advanced Security Demo 專案計畫書
 
-> **文件版本**：v2.0 ／ **更新日期**：2026-09-10 ／ **狀態**：待核准後開工
+> **文件版本**：v2.1 ／ **更新日期**：2026-09-10 ／ **狀態**：待核准後開工
 > **專案代號**：BingoBlitz（雲端賓果大亂鬥）
 > **本文件是本專案的唯一權威計畫（Single Source of Truth）。**
 > 任務拆解見 [`tasks.md`](tasks.md)，技術依據與查證來源見 [`research.md`](research.md)。
@@ -9,6 +9,19 @@
 > 這是行銷／售前 Live Demo 資產。所有漏洞與機敏資訊洩漏皆為刻意設計，
 > 用於展示 GitHub Copilot 與 GitHub Advanced Security 的偵測與修復能力。
 > **嚴禁**部署至正式環境或公開位置。詳見 [`SECURITY-DEMO-NOTICE.md`](SECURITY-DEMO-NOTICE.md)。
+
+> ## 🚧 目前環境限制（2026-09-10 決策）
+> **本專案落在個人帳號的公開 repo：`jeff1121/GitHub-Advanced-Security-DEMO`。**
+> 現有帳號權限**無法取得 GitHub Organization 層級功能**，因此：
+>
+> - **Act 3（管理者視角）整幕暫緩**，Demo 先以**兩幕版**進行。
+> - 受影響的有 **4 項能力觸點 + Act 3 整幕**，另有 2 項待實測。見 [3.6 節](#36-能力可用性與目前限制)。
+> - Act 1 與 Act 2 **完全不受影響**——這兩幕才是整場 Demo 的兩個高潮所在。
+> - 轉為公開 repo 帶來的好處：**CodeQL、Copilot Autofix、Dependabot 在公開 repo 免費**，
+>   Phase 4 可以不等授權就先開跑。
+>
+> 待日後取得組織權限後，把 repo 轉移至組織即可解封 Act 3，
+> 本文件中標記 🚧 的段落都已保留完整規格，屆時直接啟用即可。
 
 ---
 
@@ -56,7 +69,7 @@
 
 | 受眾 | 最在意的事 | 本 Demo 對應的橋段 |
 |---|---|---|
-| CISO / 資安主管 | 弱點存量、稽核合規、風險可視化 | Act 3：Security Overview、Security Campaign |
+| CISO / 資安主管 | 弱點存量、稽核合規、風險可視化 | Act 3：Security Overview、Security Campaign（🚧 暫緩，見 3.6） |
 | 開發主管 / Tech Lead | 開發速度 vs. 品質、Code Review 負擔 | Act 2：Copilot Autofix、Copilot Code Review |
 | 開發者 | 不想被資安流程拖慢 | Act 1：Push Protection 在推送當下就擋，不用等到上線前 |
 | 採購 / IT 決策者 | 工具整合成本、要不要多買一堆 SaaS | 全程只在 GitHub 一個平台完成 |
@@ -100,12 +113,12 @@
 |---|---|---|---|---|
 | S1 | Secret Scanning（存量掃描） | Repo 一啟用就跳出 9+ 個既有 Key 洩漏 | 多處 | Act 1 |
 | S2 | **Push Protection**（推送阻擋） | 現場 commit 一個 Azure OpenAI Key，push 當場被擋下 | `apps/api/src/config/azure.ts` | **Act 1 高潮** |
-| S3 | 自訂 Pattern | 自訂內部授權 Token 格式 `BINGO_SK_live_[A-Za-z0-9]{32}` | Org 設定 + `apps/api/src/lib/license.ts` | Act 1 |
+| S3 | 自訂 Pattern | 自訂內部授權 Token 格式 `BINGO_SK_live_[A-Za-z0-9]{32}` | **Repo 層級設定** + `apps/api/src/lib/license.ts` | Act 1 |
 | S4 | Git 歷史掃描 | 一個已被 `git rm` 但仍在歷史中的 `secrets/prod.json` | Git 歷史 | Act 1 |
 | S5 | AI 偵測通用密碼 | 硬編碼的 DB 密碼（非標準格式，靠 AI 抓） | `docker-compose.yml` | Act 1 |
 | S6 | Validity Check | 說明 GitHub 會主動向服務商驗證 Token 是否仍有效 | — | Act 1 口述 |
 | S7 | 洩漏後的正確做法 | 改用 Azure Key Vault + OIDC 無密碼驗證 | `solution/hardened` 分支 | Act 1 收尾 |
-| S8 | 繞過與稽核 | 展示 Push Protection 的 bypass 申請與稽核紀錄 | Org 設定 | Act 1（進階客戶） |
+| S8 | 🚧 繞過與稽核 | 展示 Push Protection 的 bypass 申請與稽核紀錄 | ~~Org 設定~~ | ~~Act 1（進階客戶）~~ **暫緩** |
 
 ### 3.2 GitHub Code Security（CodeQL）
 
@@ -115,11 +128,11 @@
 | C2 | Code Scanning 進階設定 | 自訂 workflow、指定 `security-extended` query suite | `.github/workflows/codeql.yml` | Act 2 |
 | C3 | 多語言掃描 | 同時掃 `javascript-typescript`、`python`、`actions` | 全 repo | Act 2 |
 | C4 | **Copilot Autofix** | SQLi／XSS 一鍵產生修復並提交 | `apps/api/src/routes/rooms.ts` | **Act 2 高潮** |
-| C5 | **指派 Copilot 修 Alert** | 一次勾選 25 個 alert 丟給 Copilot Coding Agent，自動開一個 PR | Security 頁籤 | **Act 3 高潮** |
-| C6 | Security Campaign | 建立「清除注入類弱點」活動，追蹤修復進度 | Org Security 頁籤 | Act 3 |
+| C5 | ❓ 指派 Copilot 修 Alert | 單一 alert 指派應可用；**批次 25 個是否需組織層級的 campaign 待驗證**（見 3.6） | Security 頁籤 | Act 2 收尾（改） |
+| C6 | 🚧 Security Campaign | 建立「清除注入類弱點」活動，追蹤修復進度 | ~~Org Security 頁籤~~ | ~~Act 3~~ **暫緩** |
 | C7 | PR 上的 Code Scanning 檢查 | PR 被 Required Check 擋住無法合併 | Ruleset | Act 2 |
-| C8 | 第三方 SARIF 匯入 | 把 Trivy／ESLint 結果匯進同一個 Security 頁籤 | `.github/workflows/sarif-upload.yml` | Act 3 |
-| C9 | 自訂 CodeQL 查詢 | 自訂查詢：抓「未經授權的 Socket.IO 事件處理器」 | `.github/codeql/custom-queries/` | Act 3（進階客戶） |
+| C8 | 第三方 SARIF 匯入 | 把 Trivy／ESLint 結果匯進同一個 Security 頁籤 | `.github/workflows/sarif-upload.yml` | Act 2 收尾（改） |
+| C9 | 自訂 CodeQL 查詢 | 自訂查詢：抓「未經授權的 Socket.IO 事件處理器」 | `.github/codeql/custom-queries/` | Act 2（進階客戶，改） |
 
 ### 3.3 供應鏈安全
 
@@ -127,11 +140,11 @@
 |---|---|---|---|---|
 | D1 | Dependabot Alerts | 10+ 個既有漏洞相依套件，含 ≥2 個 Critical | `package.json` / `requirements.txt` | Act 2 |
 | D2 | Dependabot Security Updates | 自動開好的修復 PR | — | Act 2 |
-| D3 | Dependabot Version Updates | 定期升版 PR | `.github/dependabot.yml` | Act 3 |
+| D3 | Dependabot Version Updates | 定期升版 PR | `.github/dependabot.yml` | Act 2 收尾（改） |
 | D4 | Dependency Review Action | PR 中新增高風險套件 → 直接擋 | `.github/workflows/dependency-review.yml` | Act 2 |
 | D5 | 授權合規檢查 | 引入 LGPL 套件 → `deny-licenses` 觸發 | 同上 | Act 2 |
-| D6 | SBOM 匯出 | 一鍵匯出 SPDX 格式清單 | Repo Insights | Act 3 |
-| D7 | Artifact Attestations | 建置產物來源證明 | `.github/workflows/deploy-azure.yml` | Act 3（進階） |
+| D6 | SBOM 匯出 | 一鍵匯出 SPDX 格式清單 | Repo Insights | Act 2 收尾（改） |
+| D7 | Artifact Attestations | 建置產物來源證明 | `.github/workflows/deploy-azure.yml` | Act 2（進階，改） |
 
 ### 3.4 GitHub Copilot
 
@@ -142,7 +155,7 @@
 | P3 | **Copilot Code Review** | PR 上自動留意見，抓出 God Function 與缺測試 | **Act 2** |
 | P4 | Copilot 自訂指令 | `.github/copilot-instructions.md` 注入團隊安全規範，讓 Copilot 從一開始就寫出安全的程式碼 | Act 1 |
 | P5 | Copilot 產生單元測試 | 為賓果連線判定補上測試 | Act 2 |
-| P6 | Copilot Coding Agent | 指派 Issue 給 Copilot，它自己開 PR | Act 3 |
+| P6 | Copilot Coding Agent | 指派 Issue 給 Copilot，它自己開 PR | Act 2 收尾（改） |
 | P7 | Copilot PR Summary | 自動摘要 PR 變更 | Act 2 |
 
 ### 3.5 平台治理
@@ -151,19 +164,66 @@
 |---|---|---|---|
 | G1 | Repository Rulesets | 強制 PR、必要檢查、禁止強制推送 | Repo 設定 |
 | G2 | CODEOWNERS | 動到 `infra/` 就必須資安團隊核准 | `.github/CODEOWNERS` |
-| G3 | Security Overview | 全組織弱點儀表板、趨勢圖 | Org 層級 |
-| G4 | Security Configurations | 一套安全設定套用到全組織 repo | Org 設定 |
+| G3 | 🚧 Security Overview | 全組織弱點儀表板、趨勢圖 | ~~Org 層級~~ **暫緩**（repo 層級的 Security 頁籤仍可看單一 repo 的 alert 清單） |
+| G4 | 🚧 Security Configurations | 一套安全設定套用到全組織 repo | ~~Org 設定~~ **暫緩**（改為在 repo 設定頁逐項手動啟用） |
 | G5 | 私密弱點回報 | 外部研究員回報管道 | Repo 設定 |
 | G6 | Actions 權限限縮 | `permissions:` 最小權限原則（對照 INF-06 的反例） | Workflow |
 | G7 | Environment 保護規則 | 部署到 Production 需人工核准 | Repo 設定 |
 
-**合計 38 項能力觸點。**
+**合計 38 項能力觸點，其中 4 項 🚧 暫緩、1 項 ❓ 待驗證，實際可演 33–34 項。**
+
+---
+
+### 3.6 能力可用性與目前限制
+
+> **決策日期 2026-09-10**：現有帳號權限無法取得 GitHub Organization 層級功能。
+> 專案落在個人帳號的**公開** repo `jeff1121/GitHub-Advanced-Security-DEMO`。
+
+#### 🚧 暫緩的能力（需組織層級權限）
+
+| # | 能力 | 為何被擋 | 解封條件 |
+|---|---|---|---|
+| C6 | Security Campaign | Campaign 建立於組織的 Security 頁籤 | repo 轉移至組織 |
+| G3 | Security Overview（組織儀表板） | 跨 repo 的趨勢圖與風險彙總是組織層級視圖 | repo 轉移至組織 |
+| G4 | Security Configurations | 「一套設定套用到全組織 repo」本質上就是組織功能 | repo 轉移至組織 |
+| S8 | Push Protection 繞過申請與稽核 | bypass 權限設定在組織的 Security Configuration 中 | repo 轉移至組織 |
+| — | **Act 3 整幕**（管理者視角） | 上述四項是這一幕的全部內容 | 同上 |
+
+#### ❓ 待驗證（不確定是否受影響，Phase 4 實測）
+
+| # | 項目 | 疑慮 | 驗證任務 |
+|---|---|---|---|
+| C5 | 批次指派 25 個 alert 給 Copilot | 官方文件寫「從 code scanning backlog **或 security campaign**」批次指派。campaign 已確定不可用；**backlog 路徑是否為 repo 層級功能，必須實測** | T-407 |
+| S3 | 自訂 Secret Scanning Pattern | 自訂 pattern 可設在 repo 層級（`research.md` R-05 已查證），但**公開 repo 是否需要 Secret Protection 授權才能用自訂 pattern，未查證** | T-404 |
+
+**若 C5 實測不可用**，Act 2 的收尾改為「單一 alert 指派給 Copilot，看它開 PR」——
+量體感較弱，但敘事仍然成立。主持稿需備兩套講法。
+
+#### ✅ 不受影響的能力（公開 repo 免費或個人帳號即可）
+
+| 類別 | 仍可完整展示 |
+|---|---|
+| Secret Protection | 存量掃描（S1）、**Push Protection（S2）**、歷史掃描（S4）、AI 通用密碼（S5）、Validity Check（S6）、Key Vault 正確做法（S7） |
+| Code Security | 預設與進階設定（C1、C2）、多語言掃描（C3）、**Copilot Autofix（C4）**、PR 檢查（C7）、SARIF 匯入（C8）、自訂查詢（C9） |
+| 供應鏈 | Dependabot 全套（D1–D3）、Dependency Review（D4、D5）、SBOM（D6）、Attestations（D7） |
+| Copilot | 全部七項（P1–P7） |
+| 治理 | Rulesets（G1）、CODEOWNERS（G2）、私密弱點回報（G5）、Actions 權限（G6）、Environment 保護（G7） |
+
+**關鍵結論**：**Act 1 與 Act 2 完全不受影響**，而整場 Demo 的兩個高潮
+（Push Protection 當場阻擋、Copilot Autofix 一鍵修復）都在這兩幕裡。
+
+轉為公開 repo 反而帶來一個實質好處：**CodeQL、Copilot Autofix、Dependabot 在公開 repo 免費**
+（`research.md` R-02），Phase 4 可以不等授權就先開跑，把驗證時程往前拉。
+
 
 ---
 
 ## 4. Demo 劇本（三幕劇）
 
-### 4.1 完整版（60 分鐘）
+> 🚧 **2026-09-10 起，Act 3 暫緩**（見 [3.6 節](#36-能力可用性與目前限制)）。
+> 目前執行 [**4.1b 兩幕版**](#41b-兩幕版45-分鐘目前執行版本)。4.1 的三幕版規格完整保留，取得組織權限後直接啟用。
+
+### 4.1 三幕完整版（60 分鐘，需組織權限，目前暫緩）
 
 | 時間 | 段落 | 內容 | Wow Moment |
 |---|---|---|---|
@@ -174,9 +234,26 @@
 | 38–52 | **Act 3：管理者視角** | Security Overview 看到 40+ 存量弱點 → 建立 Security Campaign「清除注入類弱點」→ **一次勾選 25 個 alert 指派給 Copilot** → Copilot 自動開 PR → Dependabot 自動修復 PR → 組織層級趨勢報表 | ⭐ 一次指派 25 個 alert 給 AI |
 | 52–60 | **收尾** | 價值總結、導入路徑、授權說明、Q&A | — |
 
+### 4.1b 兩幕版（45 分鐘，目前執行版本）
+
+Act 3 的四項能力需組織權限，暫時拿掉。**兩個高潮都在 Act 1 與 Act 2，敘事完整性不受損。**
+
+| 時間 | 段落 | 內容 | Wow Moment |
+|---|---|---|---|
+| 0–5 | **開場暖身** | 請在場所有人掃 QR Code，一起玩一局 BingoBlitz | 客戶自己在玩，會場有笑聲 |
+| 5–8 | **設定情境** | 「這是我們團隊做的，兩週後上線。現在我們來看看它的原始碼。」 | 從歡樂轉到嚴肅的落差 |
+| 8–22 | **Act 1：左移防護** | Copilot 協助開發「踢出玩家」功能 → 開發者順手把 Azure OpenAI Key 貼進設定檔 → `git push` → **當場被 Push Protection 擋下** → 改用 Key Vault → 展示自訂 Pattern、歷史洩漏掃描、用 AI 產生 regex | ⭐ Push 被擋下的那一刻 |
+| 22–40 | **Act 2：PR 品質關卡** | 開 PR → CodeQL 掃出 SQL Injection 與 XSS → **Copilot Autofix 一鍵產生修復** → Copilot Code Review 指出 God Function 與缺少測試 → Dependency Review 擋下含 CVE 的 lodash 與 LGPL 授權違規 → Required Check 讓 PR 無法合併 | ⭐ Autofix 直接給出可合併的修補 |
+| 40–45 | **收尾** | 指派 Copilot 修 alert（C5，量體視實測結果）→ 存量弱點數字帶過 → 價值總結、導入路徑、Q&A | — |
+
+**給 CISO 受眾的補償話術**：組織儀表板這一段改用**口述 + 截圖**帶過，
+並誠實說明「這需要組織層級授權，正是我們建議貴公司採購的層級」——
+把限制轉成銷售論點，比含糊帶過好。
+
 ### 4.2 精簡版（30 分鐘）
 
-開場玩一局（3 分鐘）→ Act 1 只演 Push Protection（7 分鐘）→ Act 2 完整（12 分鐘）→ Security Overview 快閃（5 分鐘）→ Q&A（3 分鐘）。
+開場玩一局（3 分鐘）→ Act 1 只演 Push Protection（7 分鐘）→ Act 2 完整（15 分鐘）→ Q&A（5 分鐘）。
+（原本的「Security Overview 快閃」段落 🚧 暫緩，時間補進 Act 2。）
 
 ### 4.3 攤位版（15 分鐘）
 
@@ -770,9 +847,13 @@ jobs:
 - 禁止強制推送、禁止刪除分支
 - **不繞過** Push Protection（bypass 僅開放給指定的 Demo 主持人帳號，且需留稽核紀錄）
 
-### 13.5 組織層級 Security Configuration
+### 13.5 🚧 組織層級 Security Configuration（暫緩）
 
-建立名為 `bingo-demo-baseline` 的安全設定檔並套用：
+> **目前無組織權限，改為在 repo 的 Settings → Code security 頁面逐項手動啟用同樣的功能。**
+> 下表的設定項目不變，只是套用方式從「一套組態套到全組織」降為「單一 repo 手動勾選」。
+> 取得組織權限後，把下表原樣建成 `bingo-demo-baseline` 設定檔即可。
+
+建立名為 `bingo-demo-baseline` 的安全設定檔並套用（暫以 repo 層級手動設定替代）：
 
 | 功能 | 設定 |
 |---|---|
@@ -832,7 +913,7 @@ Live Demo 最怕的就是「上一場的殘留狀態」。`scripts/reset-demo.sh
 4. 清空資料庫並重新 seed
 5. 執行 `verify-alerts.sh` 確認基準狀態正確
 
-**更保險的做法（建議採用）**：把整個 repo 做成組織內的 **Template Repository**，每場 Demo 從範本開一個新 repo（例如 `ghas-demo-2026-09-10-客戶名`）。這樣掃描會全部重跑一次，客戶還能看到「從零開始啟用 GHAS 的完整過程」，而且完全不會有殘留。Demo 後直接刪除。
+**更保險的做法（建議採用）**：把整個 repo 做成 **Template Repository**（個人帳號同樣支援，不受組織權限限制），每場 Demo 從範本開一個新 repo（例如 `ghas-demo-2026-09-10-客戶名`）。這樣掃描會全部重跑一次，客戶還能看到「從零開始啟用 GHAS 的完整過程」，而且完全不會有殘留。Demo 後直接刪除。
 
 ---
 
@@ -909,7 +990,7 @@ Live Demo 最怕的就是「上一場的殘留狀態」。`scripts/reset-demo.sh
 | R3 | 現場網路不通或 Azure 服務異常 | 高 | Mock 模式、本地 docker-compose、全程備援錄影、手機熱點備援 |
 | R4 | CodeQL 掃描耗時過久，Demo 現場等不了 | 中 | 事先跑完，現場展示既有 alert；如需現場觸發，用 `paths` 限縮掃描範圍到單一資料夾 |
 | R5 | Copilot Autofix 每次產出的修復不同，可能不如預期 | 中 | 彩排時記錄實際輸出；準備話術：「AI 給的是建議，人仍需審核——這正是 GitHub 把它放在 PR 流程中而非自動合併的原因」。**誠實面對反而是加分點** |
-| R6 | GHAS 授權或組織權限不足 | 高 | Phase 0 就確認；必要時申請 GHAS 試用；部分功能（公開 repo 的 Autofix）可用免費額度演示 |
+| R6 | GHAS 授權或組織權限不足 | 高 | **已發生（2026-09-10）**：無組織權限，Act 3 暫緩，改走 4.1b 兩幕版。緩解措施：轉為公開 repo 取得免費的 CodeQL／Autofix／Dependabot；組織層級畫面改以截圖口述帶過，並轉化為「這正是建議採購的授權層級」的銷售論點。詳見 3.6 節 |
 | R7 | Push Protection 對非合作夥伴格式的密鑰不觸發 | 中 | 只挑選已驗證會觸發的 Pattern；自訂 Pattern 需在 Phase 4 完成 dry run 實測後才納入劇本 |
 | R8 | 客戶環境的防火牆擋住 github.com | 中 | 事前確認；改用自備網路；最差情況播錄影 |
 | R9 | 弱點太多，Demo 節奏拖沓 | 中 | 劇本只演 8–10 個弱點，其餘作為「存量」在 Security Overview 中呈現數字 |
@@ -922,13 +1003,16 @@ Live Demo 最怕的就是「上一場的殘留狀態」。`scripts/reset-demo.sh
 
 在 Phase 0 開始前需要確認（**這些答案會改變哪些功能演得出來**）：
 
-1. **GitHub 方案**：Enterprise Cloud 還是 Team？是否已有 GHAS（Secret Protection／Code Security）授權或試用額度？
+1. ✅ **GitHub 方案**（2026-09-10 已答）：個人帳號，**無組織層級權限**。專案落在個人公開 repo `jeff1121/GitHub-Advanced-Security-DEMO`。組織層級功能（Security Overview／Configurations／Campaign）暫緩，見 3.6 節。GHAS 授權狀態仍待確認，但公開 repo 已可免費使用 CodeQL、Copilot Autofix 與 Dependabot。
 2. **Copilot 授權層級**：Business 還是 Enterprise？（Copilot Code Review、Coding Agent 的可用性不同）
 3. **Azure 訂閱**：是否有可用訂閱？若無，是否全面採用 Mock 模式？
 4. **目標客戶產業**：金融／製造／零售？賓果主題可依產業客製。
 5. **Demo 語言**：中文為主？是否需要英文版主持稿？
 6. **是否需要投影片**：或全程實機操作？
-7. **Repo 可見性**：Private、Internal，還是 Public？（Public 才有免費的 Autofix，但有外流風險——建議 Internal）
+7. ✅ **Repo 可見性**（2026-09-10 已答）：**Public**。判定本專案無機密性，且公開 repo 才有免費的 Autofix 與 CodeQL。
+   **但請在 Phase 3 開工前重新確認一次**——屆時 58 條弱點與合成憑證會全部公開，
+   第三方掃描機器人會抓到那些假 Key（無效，但可能產生外部通報噪音），
+   弱點程式碼也會被搜尋引擎索引。R2 的風險屆時從「內部管控」變成「只靠 README 警語」。
 
 ---
 
