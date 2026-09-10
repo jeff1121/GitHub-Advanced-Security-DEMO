@@ -13,6 +13,7 @@
 | 文件 | 內容 | 狀態 |
 |---|---|---|
 | [docs/plan.md](docs/plan.md) | **專案計畫書（唯一權威）**——目標、架構、API 契約、弱點植入規格、Demo 劇本、時程 | ✅ |
+| [docs/DEMO-CHEATSHEET.md](docs/DEMO-CHEATSHEET.md) | **Demo 快速小抄**——分支用途與切換時機快速指引 | ✅ |
 | [docs/tasks.md](docs/tasks.md) | **任務拆解**——68 個任務、依賴關係、完成定義、Phase 關卡 | ✅ |
 | [docs/research.md](docs/research.md) | **技術研究與查證紀錄**——GitHub 官方文件依據、待確認開放問題 | ✅ |
 | [docs/SECURITY-DEMO-NOTICE.md](docs/SECURITY-DEMO-NOTICE.md) | 免責聲明與使用限制 | ✅ |
@@ -23,7 +24,10 @@
 
 ## 現況
 
-**Phase 0：前置準備** — 計畫已完成，等待 [plan.md 第 18 節](docs/plan.md#18-待確認事項) 剩餘 5 個待確認事項有答案後開工。
+**Phase 0：前置準備** — ✅ 已完成（7 項決策已定案，Mock 模式與合規流程確立）。
+**Phase 1：骨架搭建** — ✅ 已完成（Monorepo、Workspaces、共用型別、API/Web/Scoring 基礎與 CI 已就緒）。
+**Phase 2：遊戲核心（乾淨版）** — ✅ 已完成（M1 里程碑達成，乾淨版作為 `solution/hardened` 對照組）。
+**Phase 3：植入弱點** — 即將展開（依弱點目錄精準植入 58 個弱點，打造 `main` 展示用漏洞庫）。
 
 > 🚧 **範圍調整（2026-09-10）**：現有帳號無 GitHub Organization 層級權限，
 > **Act 3（管理者視角）暫緩**，Demo 改走 [4.1b 兩幕版](docs/plan.md#41b-兩幕版45-分鐘目前執行版本)。

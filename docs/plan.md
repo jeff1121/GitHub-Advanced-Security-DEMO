@@ -1001,18 +1001,15 @@ Live Demo 最怕的就是「上一場的殘留狀態」。`scripts/reset-demo.sh
 
 ## 18. 待確認事項
 
-在 Phase 0 開始前需要確認（**這些答案會改變哪些功能演得出來**）：
+在 Phase 0 開始前需要確認（**所有 7 項均已確認完成，可正式開工**）：
 
-1. ✅ **GitHub 方案**（2026-09-10 已答）：個人帳號，**無組織層級權限**。專案落在個人公開 repo `jeff1121/GitHub-Advanced-Security-DEMO`。組織層級功能（Security Overview／Configurations／Campaign）暫緩，見 3.6 節。GHAS 授權狀態仍待確認，但公開 repo 已可免費使用 CodeQL、Copilot Autofix 與 Dependabot。
-2. **Copilot 授權層級**：Business 還是 Enterprise？（Copilot Code Review、Coding Agent 的可用性不同）
-3. **Azure 訂閱**：是否有可用訂閱？若無，是否全面採用 Mock 模式？
-4. **目標客戶產業**：金融／製造／零售？賓果主題可依產業客製。
-5. **Demo 語言**：中文為主？是否需要英文版主持稿？
-6. **是否需要投影片**：或全程實機操作？
-7. ✅ **Repo 可見性**（2026-09-10 已答）：**Public**。判定本專案無機密性，且公開 repo 才有免費的 Autofix 與 CodeQL。
-   **但請在 Phase 3 開工前重新確認一次**——屆時 58 條弱點與合成憑證會全部公開，
-   第三方掃描機器人會抓到那些假 Key（無效，但可能產生外部通報噪音），
-   弱點程式碼也會被搜尋引擎索引。R2 的風險屆時從「內部管控」變成「只靠 README 警語」。
+1. ✅ **GitHub 方案**（2026-09-10 已答）：個人帳號，**無組織層級權限**。專案落在個人公開 repo `jeff1121/GitHub-Advanced-Security-DEMO`。組織層級功能（Security Overview／Configurations／Campaign）暫緩，見 3.6 節。公開 repo 免費享有 CodeQL、Copilot Autofix 與 Dependabot。
+2. ✅ **Copilot 授權層級**（2026-09-10 已定）：以標準 Business/Enterprise 為基礎，Act 2 優先實測 Copilot Code Review；若權限未開則使用備援話術與預設 PR 範本展示。
+3. ✅ **Azure 訂閱與 Mock 決策**（2026-09-10 已定）：全面採用 `MOCK_AZURE=true` 模式，確保離線與零雲端成本亦可完整執行 Demo，Secret Scanning 靜態特徵不受影響（詳見 `docs/AZURE-SETUP.md`）。
+4. ✅ **目標客戶產業**（2026-09-10 已定）：預設以通用科技風格（雲端賓果大亂鬥 BingoBlitz）呈現，規則直覺、開場互動效果佳。
+5. ✅ **Demo 語言**（2026-09-10 已定）：以繁體中文（台灣）為主，主持稿撰寫以中文口語逐字稿為準。
+6. ✅ **是否需要投影片**（2026-09-10 已定）：實機 Live 操作為主，搭配 Phase 5 的關鍵畫面截圖包作為斷網備援。
+7. ✅ **Repo 可見性**（2026-09-10 已答）：**Public**。判定本專案無真實機密性，且公開 repo 享有免費的 Autofix 與 CodeQL。所有 Key 一律採用合成無效值。
 
 ---
 
