@@ -65,7 +65,7 @@ export const validateCardStructure = (card: BingoCard): boolean => {
       const val = card.numbers[r][c];
       if (r === 2 && c === 2) continue; // Free space
 
-      if (typeof val !== 'number' || val < min || val > max || seen.has(val)) {
+      if (!Number.isInteger(val) || val < min || val > max || seen.has(val)) {
         return false;
       }
       seen.add(val);

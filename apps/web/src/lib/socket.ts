@@ -1,35 +1,14 @@
 import { io, Socket } from 'socket.io-client';
 
-let socket: Socket | null = null;
-
-export const getSocket = (token?: string): Socket => {
-  if (!socket) {
-    const url = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    socket = io(url, {
-      auth: { token },
-      autoConnect: false,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+export function createSocket(): Socket {
+  return io({ autoConnect: false, reconnection: true, reconnectionAttempts: 10 });
+}
+export function emitRequest<T>(socket: Socket, event: string, payload: unknown): Promise<T> {
+  return new Promise((resolve, reject) => {
+    socket.timeout(7000).emit(event, payload, (error: Error | null, response: { ok: boolean; data: T; error?: { message: string } }) => {
+      if (error) reject(new Error('Connection timed out; reload to synchronize room state.'));
+      else if (!response?.ok) reject(new Error(response?.error?.message || 'Request failed'));
+      else resolve(response.data);
     });
-  } else if (token) {
-    socket.auth = { token };
-  }
-
-  return socket;
-};
-
-export const connectSocket = (token?: string): Socket => {
-  const s = getSocket(token);
-  if (!s.connected) {
-    s.connect();
-  }
-  return s;
-};
-
-export const disconnectSocket = (): void => {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-};
+  });
+}

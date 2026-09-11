@@ -1,37 +1,19 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../src/config';
 
-describe('Configuration Loader', () => {
-  it('should load valid config with defaults', () => {
-    const validEnv = {
-      JWT_SECRET: 'test-secret',
-      DATABASE_URL: 'postgres://localhost/test',
-      MOCK_AZURE: 'true'
-    };
-
-    const cfg = loadConfig(validEnv);
-    expect(cfg.JWT_SECRET).toBe('test-secret');
-    expect(cfg.PORT).toBe(3001);
-    expect(cfg.MOCK_AZURE).toBe(true);
-    expect(cfg.DEMO_FAST_MODE).toBe(true);
+const valid = { JWT_SECRET: 'unit-test-only-strong-enough-secret-123456789', DATABASE_URL: 'postgres://test:test@127.0.0.1/test', MOCK_AZURE: 'true' };
+describe('Configuration', () => {
+  it('loads validated values', () => {
+    const result = loadConfig(valid);
+    expect(result.MOCK_AZURE).toBe(true);
+    expect(result.DEMO_FAST_MODE).toBe(true);
   });
-
-  it('should throw clear error when required variable is missing', () => {
-    const invalidEnv = {
-      DATABASE_URL: 'postgres://localhost/test'
-      // missing JWT_SECRET
-    };
-
-    expect(() => loadConfig(invalidEnv)).toThrowError(/JWT_SECRET is required/);
-  });
-
-  it('should throw clear error when MOCK_AZURE=false and azure keys are missing', () => {
-    const envMissingAzure = {
-      JWT_SECRET: 'test-secret',
-      DATABASE_URL: 'postgres://localhost/test',
-      MOCK_AZURE: 'false'
-    };
-
-    expect(() => loadConfig(envMissingAzure)).toThrowError(/Real Azure mode/);
+  it('rejects absent JWT secret with no fallback', () => expect(() => loadConfig({ DATABASE_URL: valid.DATABASE_URL })).toThrow(/JWT_SECRET is required/));
+  it('rejects weak JWT secret', () => expect(() => loadConfig({ ...valid, JWT_SECRET: 'weak' })).toThrow(/JWT_SECRET/));
+  it('rejects missing database URL', () => expect(() => loadConfig({ JWT_SECRET: valid.JWT_SECRET })).toThrow(/DATABASE_URL/));
+  it('rejects unsupported real Azure mode', () => expect(() => loadConfig({ ...valid, MOCK_AZURE: 'false' })).toThrow(/not implemented/));
+  it('rejects malformed booleans and ports', () => {
+    expect(() => loadConfig({ ...valid, MOCK_AZURE: 'tru' })).toThrow();
+    expect(() => loadConfig({ ...valid, PORT: '-1' })).toThrow();
   });
 });

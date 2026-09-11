@@ -5,6 +5,7 @@ import { Star } from 'lucide-react';
 interface BingoCardProps {
   card: BingoCardType;
   marked: number[];
+  drawn: number[];
   onMarkNumber: (num: number) => void;
   disabled?: boolean;
 }
@@ -20,6 +21,7 @@ const COLUMN_COLORS = [
 export const BingoCard: React.FC<BingoCardProps> = ({
   card,
   marked,
+  drawn,
   onMarkNumber,
   disabled = false
 }) => {
@@ -50,7 +52,9 @@ export const BingoCard: React.FC<BingoCardProps> = ({
             return (
               <button
                 key={`${rIdx}-${cIdx}`}
-                disabled={disabled || isCenter}
+                aria-label={isCenter ? '免費格' : `標記 ${val}`}
+                aria-pressed={isMarked}
+                disabled={disabled || isCenter || isMarked || !drawn.includes(val)}
                 onClick={() => !isCenter && onMarkNumber(val)}
                 className={`flex flex-col items-center justify-center rounded-xl font-bold text-base sm:text-lg transition-all transform active:scale-95 select-none ${
                   isCenter

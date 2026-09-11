@@ -13,6 +13,16 @@ sample_card = {
     ]
 }
 
+def test_score_verify_rejects_invalid_card():
+    for card in [{"numbers": [[1]]}, {"numbers": [[0] * 5 for _ in range(5)]}]:
+        res = client.post("/score/verify", json={"card": card, "marked": [], "draws": []})
+        assert res.status_code == 422
+
+
+def test_stats_does_not_fabricate_data():
+    assert client.get("/stats/leaderboard").status_code == 501
+
+
 def test_score_verify_no_lines():
     res = client.post("/score/verify", json={
         "card": sample_card,

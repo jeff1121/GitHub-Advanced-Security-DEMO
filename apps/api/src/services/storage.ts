@@ -1,52 +1,31 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import { config } from '../config';
+import { AppError } from '../lib/errors';
 
-const LOCAL_BLOB_DIR = path.resolve(process.cwd(), '.data/blobs');
-
-// Ensure storage directory exists
-if (!fs.existsSync(LOCAL_BLOB_DIR)) {
-  fs.mkdirSync(LOCAL_BLOB_DIR, { recursive: true });
+export async function saveBlob(buffer: Buffer) {
+  if (buffer.length > 1024 * 1024) throw new AppError(413, 'Image exceeds one megabyte');
+  let png: Buffer;
+  try {
+    const image = sharp(buffer, { limitInputPixels: 4000000 });
+    const metadata = await image.metadata();
+    if (!['jpeg', 'png', 'webp'].includes(metadata.format ?? '')) throw new Error('Unsupported image');
+    png = await image.resize(256, 256, { fit: 'cover' }).png().toBuffer();
+  } catch { throw new AppError(400, 'Provide a valid PNG, JPEG or WebP image'); }
+  await fs.mkdir(config.BLOB_DIR, { recursive: true });
+  const filename = `${randomUUID()}.png`;
+  await fs.writeFile(path.join(config.BLOB_DIR, filename), png, { flag: 'wx', mode: 0o600 });
+  return { filename, url: `/api/avatar/${filename}` };
 }
 
-export const saveBlob = async (
-  buffer: Buffer,
-  originalName: string,
-  contentType: string
-): Promise<{ filename: string; url: string }> => {
-  // Phase 2: Safe UUID-based filename sanitization
-  const ext = path.extname(originalName).toLowerCase() || '.png';
-  const filename = `${crypto.randomUUID()}${ext}`;
-
-  if (config.MOCK_AZURE) {
-    const filePath = path.join(LOCAL_BLOB_DIR, filename);
-    await fs.promises.writeFile(filePath, buffer);
-    return {
-      filename,
-      url: `/api/avatar/${filename}`
-    };
-  }
-
-  // Real Azure Storage placeholder when MOCK_AZURE=false
-  return {
-    filename,
-    url: `/api/avatar/${filename}`
-  };
-};
-
-export const getBlobPath = (filename: string): string | null => {
-  // Phase 2: Safe path resolution with Traversal Guard
-  // (In Phase 3, BE-03 will remove this safe check for demonstration)
-  const safePath = path.normalize(path.join(LOCAL_BLOB_DIR, filename));
-
-  if (!safePath.startsWith(LOCAL_BLOB_DIR)) {
-    return null; // Reject path traversal attempt
-  }
-
-  if (!fs.existsSync(safePath)) {
-    return null;
-  }
-
-  return safePath;
-};
+export async function getBlobPath(filename: string): Promise<string | null> {
+  if (!/^[a-f0-9-]{36}\.png$/.test(filename)) return null;
+  try {
+    const directory = await fs.realpath(config.BLOB_DIR);
+    const file = await fs.realpath(path.join(directory, filename));
+    if (path.dirname(file) !== directory || !(await fs.stat(file)).isFile()) return null;
+    return file;
+  } catch { return null; }
+}

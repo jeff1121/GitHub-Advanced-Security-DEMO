@@ -1,49 +1,56 @@
-import http from 'http';
-import { Server as SocketIOServer } from 'socket.io';
-import dotenv from 'dotenv';
+import http from 'node:http';
+import { Server } from 'socket.io';
+import { config } from './config';
 import { createApp } from './app';
 import { registerSocketHandlers } from './sockets/handlers';
+import { RoomManager } from './game/manager';
+import { pool } from './lib/db';
+import { runMigrations } from './db/migrate';
 
-dotenv.config();
-
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
-const webOrigin = process.env.WEB_ORIGIN || 'http://localhost:5173';
-
-export const startServer = (customPort: number = port) => {
+export async function startServer(port = config.PORT, host = config.HOST) {
+  await runMigrations();
   const app = createApp();
   const server = http.createServer(app);
-
-  const io = new SocketIOServer(server, {
-    cors: {
-      origin: webOrigin,
-      credentials: true
+  const io = new Server(server, {
+    cors: { origin: config.WEB_ORIGIN },
+    maxHttpBufferSize: 16384,
+    allowRequest: (req, callback) => {
+      const origin = req.headers.origin;
+      callback(null, !origin || origin === config.WEB_ORIGIN);
     }
   });
-
-  registerSocketHandlers(io);
-
-  const runningServer = server.listen(customPort, () => {
-    console.log(`[BingoBlitz API] Server listening on port ${customPort}`);
+  const manager = new RoomManager(io);
+  registerSocketHandlers(io, manager);
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, resolve);
   });
-
-  // Graceful shutdown
-  const shutdown = () => {
-    console.log('[BingoBlitz API] Shutting down gracefully...');
-    io.close(() => {
-      runningServer.close(() => {
-        console.log('[BingoBlitz API] HTTP server closed.');
-        process.exit(0);
-      });
-    });
+  await manager.restore();
+  return {
+    app, io, server, manager,
+    close: async () => {
+      manager.close();
+      await new Promise<void>((resolve) => io.close(() => resolve()));
+    }
   };
+}
 
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
-
-  return { server: runningServer, io, app };
-};
-
-// Start if executed directly
 if (require.main === module) {
-  startServer();
+  startServer().then((runtime) => {
+    console.log(`BingoBlitz API ready on ${config.HOST}:${config.PORT}`);
+    let stopping = false;
+    const stop = async () => {
+      if (stopping) return;
+      stopping = true;
+      await runtime.close();
+      await pool.end();
+    };
+    for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
+      void stop().catch(() => { console.error('Shutdown failed'); process.exitCode = 1; });
+    });
+  }).catch(() => {
+    console.error('Startup failed: check environment and database availability.');
+    void pool.end();
+    process.exitCode = 1;
+  });
 }

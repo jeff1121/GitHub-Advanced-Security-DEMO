@@ -2,19 +2,29 @@
   "name": "bingoblitz-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "BingoBlitz — GitHub Advanced Security Demo Monorepo",
-  "workspaces": [
-    "packages/*",
-    "apps/api",
-    "apps/web"
-  ],
+  "description": "BingoBlitz — isolated GitHub security demonstration",
+  "engines": { "node": ">=22.12.0" },
+  "workspaces": ["packages/*", "apps/api", "apps/web"],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev:api": "npm run dev --workspace=apps/api",
-    "dev:web": "npm run dev --workspace=apps/web",
-    "db:migrate": "npm run db:migrate --workspace=apps/api"
+    "build": "npm run build -w @bingoblitz/shared && npm run build -w @bingoblitz/api && npm run build -w @bingoblitz/web",
+    "typecheck": "npm run build -w @bingoblitz/shared && npm run typecheck --workspaces --if-present",
+    "lint": "eslint apps packages --max-warnings 0",
+    "test": "npm run build -w @bingoblitz/shared && vitest run",
+    "test:coverage": "npm run build -w @bingoblitz/shared && vitest run --coverage",
+    "test:integration": "npm run build && vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "dev:api": "npm run build -w @bingoblitz/shared && npm run dev -w @bingoblitz/api",
+    "dev:web": "npm run build -w @bingoblitz/shared && npm run dev -w @bingoblitz/web",
+    "db:migrate": "npm run db:migrate -w @bingoblitz/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "typescript-eslint": "^8.70.0",
+    "globals": "^17.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "5.0.0",
+    "@vitest/coverage-v8": "5.0.0",
+    "@playwright/test": "^1.58.2"
   }
 }

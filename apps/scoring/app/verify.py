@@ -1,15 +1,33 @@
 from typing import List, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 FREE_SPACE = 0
 
 class BingoCardModel(BaseModel):
-    numbers: List[List[int]]
+    numbers: List[List[StrictInt]] = Field(min_length=5, max_length=5)
+
+    @field_validator("numbers")
+    @classmethod
+    def valid_card(cls, grid):
+        if any(len(row) != 5 for row in grid) or grid[2][2] != FREE_SPACE:
+            raise ValueError("Card must be 5x5 with a free center")
+        for column in range(5):
+            values = [grid[row][column] for row in range(5) if (row, column) != (2, 2)]
+            if len(set(values)) != len(values) or any(not column * 15 + 1 <= value <= column * 15 + 15 for value in values):
+                raise ValueError("Invalid column range or duplicate number")
+        return grid
 
 class ScoreVerifyRequest(BaseModel):
     card: BingoCardModel
-    marked: List[int]
-    draws: List[int]
+    marked: List[StrictInt] = Field(max_length=75)
+    draws: List[StrictInt] = Field(max_length=75)
+
+    @field_validator("marked", "draws")
+    @classmethod
+    def valid_numbers(cls, values):
+        if any(not 0 <= value <= 75 for value in values):
+            raise ValueError("Numbers must be in 0..75")
+        return values
 
 class ScoreVerifyResponse(BaseModel):
     valid: bool

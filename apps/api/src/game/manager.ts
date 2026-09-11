@@ -1,35 +1,27 @@
-import { Room } from '@bingoblitz/shared';
+import { Server } from 'socket.io';
+import { query } from '../lib/db';
 import { GameEngine } from './engine';
 
-class RoomManager {
-  private roomsByCode: Map<string, GameEngine> = new Map();
-  private roomsById: Map<string, GameEngine> = new Map();
-
-  public registerRoom(room: Room): GameEngine {
-    let engine = this.roomsByCode.get(room.code.toUpperCase());
+export class RoomManager {
+  private readonly rooms = new Map<string, GameEngine>();
+  constructor(private readonly io: Server) {}
+  get(code: string) {
+    let engine = this.rooms.get(code);
     if (!engine) {
-      engine = new GameEngine(room);
-      this.roomsByCode.set(room.code.toUpperCase(), engine);
-      this.roomsById.set(room.id, engine);
+      engine = new GameEngine(code, (event, payload) => {
+        this.io.to(code).emit(event, payload);
+        if (event === 'game:over') this.rooms.delete(code);
+      });
+      this.rooms.set(code, engine);
     }
     return engine;
   }
-
-  public getByCode(code: string): GameEngine | undefined {
-    return this.roomsByCode.get(code.toUpperCase());
+  async restore() {
+    const { rows } = await query<{ code: string; draw_interval_ms: number }>("SELECT code,draw_interval_ms FROM rooms WHERE status = 'playing'");
+    for (const row of rows) this.get(row.code).resume(row.draw_interval_ms);
   }
-
-  public getById(id: string): GameEngine | undefined {
-    return this.roomsById.get(id);
-  }
-
-  public removeRoom(code: string): void {
-    const engine = this.roomsByCode.get(code.toUpperCase());
-    if (engine) {
-      this.roomsByCode.delete(code.toUpperCase());
-      this.roomsById.delete(engine.room.id);
-    }
+  close() {
+    for (const engine of this.rooms.values()) engine.stop();
+    this.rooms.clear();
   }
 }
-
-export const roomManager = new RoomManager();

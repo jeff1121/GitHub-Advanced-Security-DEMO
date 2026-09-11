@@ -1,85 +1,35 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'http';
-import { AddressInfo } from 'net';
-import { createApp } from '../src/app';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+vi.mock('../src/lib/db', () => ({ query: vi.fn().mockRejectedValue(new Error('offline')), transaction: vi.fn().mockRejectedValue(new Error('offline')) }));
+import { httpTestServer } from './http-helper';
+import { signToken, verifyToken } from '../src/lib/jwt';
+import jwt from 'jsonwebtoken';
+import { config } from '../src/config';
 
-describe('Rooms & Auth API (T-201, T-202)', () => {
-  let server: http.Server;
-  let baseUrl: string;
-  let token: string;
-  let roomCode: string;
-
-  beforeAll(async () => {
-    const app = createApp();
-    server = http.createServer(app);
-    await new Promise<void>((resolve) => {
-      server.listen(0, () => {
-        const address = server.address() as AddressInfo;
-        baseUrl = `http://localhost:${address.port}`;
-        resolve();
-      });
-    });
-  });
-
-  afterAll(async () => {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  });
-
-  it('1. POST /api/auth/guest should create a guest token', async () => {
-    const res = await fetch(`${baseUrl}/api/auth/guest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname: 'DemoHost' })
-    });
-
-    expect(res.status).toBe(201);
-    const data = await res.json();
-    expect(data.token).toBeDefined();
-    expect(data.player.nickname).toBe('DemoHost');
-    token = data.token;
-  });
-
-  it('2. POST /api/rooms should create a new room with 6-char code', async () => {
-    const res = await fetch(`${baseUrl}/api/rooms`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ name: 'Live Demo Room' })
-    });
-
-    expect(res.status).toBe(201);
-    const data = await res.json();
-    expect(data.room).toBeDefined();
-    expect(data.room.code).toHaveLength(6);
-    expect(data.room.name).toBe('Live Demo Room');
-    roomCode = data.room.code;
-  });
-
-  it('3. GET /api/rooms/:code should retrieve the room', async () => {
-    const res = await fetch(`${baseUrl}/api/rooms/${roomCode}`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.room.code).toBe(roomCode);
-    expect(data.room.name).toBe('Live Demo Room');
-  });
-
-  it('4. POST /api/rooms/:code/join should join and return a 5x5 card', async () => {
-    const res = await fetch(`${baseUrl}/api/rooms/${roomCode}/join`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
-    });
-
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.card).toBeDefined();
-    expect(data.card.numbers).toHaveLength(5);
-    expect(data.card.numbers[2][2]).toBe(0); // Center free space
-  });
+let runtime: Awaited<ReturnType<typeof httpTestServer>>;
+const player = { id: '11111111-1111-4111-8111-111111111111', nickname: 'UnitPlayer' };
+beforeAll(async () => { runtime = await httpTestServer(); });
+afterAll(async () => { await runtime.close(); });
+it('database failures never mint a fallback guest or room', async () => {
+  const guest = await fetch(`${runtime.url}/api/auth/guest`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: 'Unit' }) });
+  expect(guest.status).toBe(503);
+  expect(await guest.json()).not.toHaveProperty('token');
+  const room = await fetch(`${runtime.url}/api/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${signToken(player)}` }, body: JSON.stringify({ name: 'UnitRoom' }) });
+  expect(room.status).toBe(503);
+  expect(await room.json()).not.toHaveProperty('room');
+});
+it('rejects missing and invalid authentication', async () => {
+  expect((await fetch(`${runtime.url}/api/rooms/ABC123`)).status).toBe(401);
+  expect((await fetch(`${runtime.url}/api/rooms/ABC123`, { headers: { Authorization: 'Bearer bad' } })).status).toBe(401);
+});
+it('rejects mass assignment and malformed room parameters', async () => {
+  const result = await fetch(`${runtime.url}/api/auth/guest`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nickname: 'Unit', is_admin: true }) });
+  expect(result.status).toBe(400);
+  expect((await fetch(`${runtime.url}/api/rooms/invalid`, { headers: { Authorization: `Bearer ${signToken(player)}` } })).status).toBe(400);
+});
+it('verifies expiry and rejects unsigned tokens', () => {
+  expect(verifyToken(signToken(player))).toEqual(player);
+  const expired = jwt.sign(player, config.JWT_SECRET, { algorithm: 'HS256', expiresIn: -1, issuer: 'bingoblitz', audience: 'bingoblitz-local' });
+  expect(() => verifyToken(expired)).toThrow();
+  const unsigned = jwt.sign(player, '', { algorithm: 'none' });
+  expect(() => verifyToken(unsigned)).toThrow();
 });

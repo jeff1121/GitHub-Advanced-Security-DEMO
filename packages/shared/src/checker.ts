@@ -1,5 +1,6 @@
 import { BingoCard, BingoLineType } from './models';
 import { FREE_SPACE } from './bingo';
+import { validateCardStructure } from './card';
 
 export interface BingoCheckResult {
   hasBingo: boolean;
@@ -19,6 +20,7 @@ export interface BingoCheckResult {
  * Free space (0) is automatically considered marked.
  */
 export const checkBingo = (card: BingoCard, markedNumbers: number[]): BingoCheckResult => {
+  if (!validateCardStructure(card)) throw new Error('Invalid bingo card');
   const markedSet = new Set<number>(markedNumbers);
   markedSet.add(FREE_SPACE); // Center cell is always considered marked
 

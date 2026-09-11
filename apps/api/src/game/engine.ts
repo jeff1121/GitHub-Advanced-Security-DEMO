@@ -1,209 +1,119 @@
-import {
-  BingoCard,
-  BingoLineType,
-  Draw,
-  Player,
-  Room,
-  RoomStatus,
-  Win,
-  checkBingo
-} from '@bingoblitz/shared';
-import { BingoDrawer } from './drawer';
-import { query } from '../lib/db';
-
-export interface RoomParticipant {
-  player: Player;
-  card: BingoCard;
-  marked: number[];
-  joinedAt: string;
-}
+import { randomInt } from 'node:crypto';
+import { Draw, Win, checkBingo } from '@bingoblitz/shared';
+import { transaction, query } from '../lib/db';
+import { AppError } from '../lib/errors';
+import { lockedRoom, requireMember } from '../services/room-service';
+import { generateCallingPhrase } from '../services/openai';
 
 export class GameEngine {
-  public readonly room: Room;
-  private readonly drawer: BingoDrawer;
-  private readonly participants: Map<string, RoomParticipant> = new Map();
-  private readonly draws: Draw[] = [];
-  private readonly winners: Win[] = [];
-  private drawTimer: NodeJS.Timeout | null = null;
-  private onDrawCallback?: (draw: Draw) => void;
-  private onGameOverCallback?: (winners: Win[]) => void;
+  private timer?: NodeJS.Timeout;
+  private stopped = false;
+  constructor(public readonly code: string, private readonly broadcast: (event: string, payload: unknown) => void) {}
 
-  constructor(room: Room) {
-    this.room = { ...room };
-    this.drawer = new BingoDrawer();
+  async start(playerId: string) {
+    const room = await transaction(async (client) => {
+      const current = await lockedRoom(client, this.code);
+      await requireMember(client, current.id, playerId);
+      if (current.host_player_id !== playerId) throw new AppError(403, 'Only the host can start');
+      if (current.status !== 'waiting') throw new AppError(409, 'Game already started');
+      await client.query("UPDATE rooms SET status = 'playing' WHERE id = $1", [current.id]);
+      return current;
+    });
+    this.broadcast('game:started', { startedAt: new Date().toISOString() });
+    this.resume(room.draw_interval_ms);
   }
 
-  public getStatus(): RoomStatus {
-    return this.room.status;
-  }
-
-  public getPlayers(): Player[] {
-    return Array.from(this.participants.values()).map((p) => p.player);
-  }
-
-  public getParticipant(playerId: string): RoomParticipant | undefined {
-    return this.participants.get(playerId);
-  }
-
-  public addParticipant(player: Player, card: BingoCard): RoomParticipant {
-    const participant: RoomParticipant = {
-      player,
-      card,
-      marked: [],
-      joinedAt: new Date().toISOString()
-    };
-    this.participants.set(player.id, participant);
-    return participant;
-  }
-
-  public removeParticipant(playerId: string): void {
-    this.participants.delete(playerId);
-  }
-
-  public markNumber(playerId: string, num: number): boolean {
-    const participant = this.participants.get(playerId);
-    if (!participant) return false;
-
-    // Check if the number has actually been drawn or is free space
-    const wasDrawn = this.draws.some((d) => d.number === num) || num === 0;
-    if (!wasDrawn) return false;
-
-    if (!participant.marked.includes(num)) {
-      participant.marked.push(num);
-    }
-    return true;
-  }
-
-  public startGame(
-    onDraw: (draw: Draw) => void,
-    onGameOver: (winners: Win[]) => void
-  ): boolean {
-    if (this.room.status !== 'waiting') {
-      return false;
-    }
-
-    this.room.status = 'playing';
-    this.onDrawCallback = onDraw;
-    this.onGameOverCallback = onGameOver;
-
-    this.scheduleNextDraw();
-    return true;
-  }
-
-  public manualDraw(): Draw | null {
-    if (this.room.status !== 'playing') {
-      return null;
-    }
-    return this.executeDraw();
-  }
-
-  private executeDraw(): Draw | null {
-    const next = this.drawer.drawNext();
-    if (!next) {
-      this.finishGame();
-      return null;
-    }
-
-    const draw: Draw = {
-      room_id: this.room.id,
-      sequence: next.sequence,
-      number: next.number,
-      phrase: `開出號碼：${next.number}！`,
-      drawn_at: new Date().toISOString()
-    };
-
-    this.draws.push(draw);
-
-    if (this.onDrawCallback) {
-      this.onDrawCallback(draw);
-    }
-
-    // Persist draw to DB (fire and forget / async)
-    query(
-      'INSERT INTO draws (room_id, sequence, number, phrase) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-      [this.room.id, draw.sequence, draw.number, draw.phrase]
-    ).catch(() => {});
-
-    if (this.drawer.isComplete()) {
-      this.finishGame();
-    }
-
-    return draw;
-  }
-
-  private scheduleNextDraw(): void {
-    if (this.room.status !== 'playing') return;
-
-    this.drawTimer = setTimeout(() => {
-      if (this.room.status === 'playing') {
-        this.executeDraw();
-        this.scheduleNextDraw();
+  resume(interval: number) {
+    if (this.timer || this.stopped) return;
+    this.timer = setTimeout(async () => {
+      this.timer = undefined;
+      try {
+        const draw = await this.draw();
+        if (draw) this.resume(interval);
+      } catch {
+        this.stopped = true;
+        this.broadcast('error', { code: 'PERSISTENCE_ERROR', message: 'Automatic drawing paused: storage unavailable. Reload after service recovery.' });
       }
-    }, this.room.draw_interval_ms || 5000);
+    }, interval);
+    this.timer.unref();
   }
 
-  public verifyAndClaimBingo(
-    playerId: string,
-    claimedLines: BingoLineType[]
-  ): { valid: boolean; score: number; win?: Win } {
-    const participant = this.participants.get(playerId);
-    if (!participant) {
-      return { valid: false, score: 0 };
+  async draw(hostId?: string): Promise<Draw | null> {
+    const result = await transaction(async (client) => {
+      const room = await lockedRoom(client, this.code);
+      if (hostId) {
+        await requireMember(client, room.id, hostId);
+        if (room.host_player_id !== hostId) throw new AppError(403, 'Only the host can draw');
+      }
+      if (room.status !== 'playing') {
+        if (hostId) throw new AppError(409, 'Game is not playing');
+        return null;
+      }
+      const { rows } = await client.query<{ number: number }>('SELECT number FROM draws WHERE room_id = $1', [room.id]);
+      const drawn = new Set(rows.map((row) => row.number));
+      const remaining = Array.from({ length: 75 }, (_, index) => index + 1).filter((number) => !drawn.has(number));
+      if (!remaining.length) return null;
+      const number = remaining[randomInt(remaining.length)];
+      const phrase = await generateCallingPhrase(number);
+      const inserted = await client.query<Draw>(
+        'INSERT INTO draws (room_id,sequence,number,phrase) VALUES ($1,$2,$3,$4) RETURNING *',
+        [room.id, rows.length + 1, number, phrase]);
+      return inserted.rows[0];
+    });
+    if (result) this.broadcast('game:drawn', result);
+    // Keep the final number available for players to mark and claim; finish after a grace interval.
+    if (result?.sequence === 75) {
+      this.stop();
+      this.timer = setTimeout(() => { void this.finishWithoutWinner().catch(() => {
+        this.broadcast('error', { code: 'PERSISTENCE_ERROR', message: 'Could not finish the game' });
+      }); }, 15000);
+      this.timer.unref();
     }
-
-    // Phase 2: Back-end verification using drawn numbers
-    // Reject claims if numbers were never drawn
-    const drawnNumbers = this.draws.map((d) => d.number);
-    const validMarks = participant.marked.filter((n) => drawnNumbers.includes(n) || n === 0);
-
-    const checkResult = checkBingo(participant.card, validMarks);
-
-    if (!checkResult.hasBingo) {
-      return { valid: false, score: 0 };
-    }
-
-    const primaryLine: BingoLineType =
-      checkResult.lines.find((l) => claimedLines.includes(l)) || checkResult.lines[0];
-
-    const win: Win = {
-      room_id: this.room.id,
-      player_id: playerId,
-      line_type: primaryLine,
-      score: checkResult.score,
-      verified: true,
-      created_at: new Date().toISOString()
-    };
-
-    this.winners.push(win);
-
-    // Save to database
-    query(
-      'INSERT INTO wins (room_id, player_id, line_type, score, verified) VALUES ($1, $2, $3, $4, $5)',
-      [this.room.id, playerId, win.line_type, win.score, true]
-    ).catch(() => {});
-
-    return { valid: true, score: checkResult.score, win };
+    return result;
   }
 
-  public finishGame(): void {
-    if (this.drawTimer) {
-      clearTimeout(this.drawTimer);
-      this.drawTimer = null;
-    }
-    this.room.status = 'finished';
-
-    query('UPDATE rooms SET status = $1 WHERE id = $2', ['finished', this.room.id]).catch(() => {});
-
-    if (this.onGameOverCallback) {
-      this.onGameOverCallback(this.winners);
-    }
+  async mark(playerId: string, number: number) {
+    return transaction(async (client) => {
+      const room = await lockedRoom(client, this.code);
+      const member = await requireMember(client, room.id, playerId);
+      if (room.status !== 'playing') throw new AppError(409, 'Game is not playing');
+      const exists = await client.query('SELECT 1 FROM draws WHERE room_id = $1 AND number = $2', [room.id, number]);
+      if (!exists.rowCount || !member.card.numbers.flat().includes(number)) throw new AppError(400, 'Number is not drawn on your card');
+      const marked = Array.from(new Set([...member.marked, number]));
+      await client.query('UPDATE room_players SET marked = $1 WHERE room_id = $2 AND player_id = $3', [JSON.stringify(marked), room.id, playerId]);
+      return marked;
+    });
   }
 
-  public getDraws(): Draw[] {
-    return [...this.draws];
+  async claim(playerId: string) {
+    const win = await transaction(async (client) => {
+      const room = await lockedRoom(client, this.code);
+      const member = await requireMember(client, room.id, playerId);
+      if (room.status !== 'playing') throw new AppError(409, 'Game is not playing');
+      const draws = await client.query<{ number: number }>('SELECT number FROM draws WHERE room_id = $1', [room.id]);
+      const drawn = new Set(draws.rows.map((row) => row.number));
+      const check = checkBingo(member.card, member.marked.filter((number) => drawn.has(number)));
+      if (!check.hasBingo) throw new AppError(400, 'BINGO is not valid');
+      const { rows } = await client.query<Win>(
+        'INSERT INTO wins (room_id,player_id,line_type,score,verified) VALUES ($1,$2,$3,$4,true) RETURNING *',
+        [room.id, playerId, check.lines[0], check.score]);
+      await client.query("UPDATE rooms SET status = 'finished' WHERE id = $1", [room.id]);
+      return rows[0];
+    });
+    this.stop();
+    this.broadcast('game:over', { winners: [win] });
+    return win;
   }
 
-  public getWinners(): Win[] {
-    return [...this.winners];
+  async finishWithoutWinner() {
+    const changed = await query("UPDATE rooms SET status = 'finished' WHERE code = $1 AND status = 'playing' RETURNING id", [this.code]);
+    this.stop();
+    if (changed.rowCount) this.broadcast('game:over', { winners: [] });
+  }
+
+  stop() {
+    this.stopped = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = undefined;
   }
 }
