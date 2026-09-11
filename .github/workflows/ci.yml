@@ -2,64 +2,103 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, solution/hardened, 'demo/**']
   pull_request:
-    branches: [main]
+    branches: [main, solution/hardened]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-jobs:
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run typecheck
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-  build:
-    name: Build
+jobs:
+  node:
+    name: Node quality and tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: '22'
+          cache: npm
       - run: npm ci
       - run: npm run build
-
-  test-node:
-    name: Test (Node.js)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: node --test scripts/local-tools.test.cjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          node-version: 20
-          cache: 'npm'
-      - run: npm ci
-      - run: npm test
+          name: web-build
+          path: apps/web/dist/
+          if-no-files-found: error
+          retention-days: 7
 
-  test-python:
-    name: Test (Python Scoring)
+  integration:
+    name: PostgreSQL integration tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Test against disposable local PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/init-local-env.sh --apply
+          set -a
+          source .env
+          set +a
+          docker run --detach --name bingo-ci-db --publish 127.0.0.1:5432:5432 \
+            --env POSTGRES_USER --env POSTGRES_DB --env POSTGRES_PASSWORD \
+            postgres:16-alpine
+          trap 'docker rm -f bingo-ci-db >/dev/null' EXIT
+          ready=false
+          for attempt in {1..60}; do
+            if docker exec bingo-ci-db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != true ]]; then
+            printf 'PostgreSQL did not become ready.\n' >&2
+            exit 1
+          fi
+          npm run db:migrate
+          npm run test:integration
+          bash scripts/seed.sh
+          bash scripts/seed.sh
+
+  python:
+    name: Python scoring tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-          cache: 'pip'
-      - name: Install dependencies
-        run: |
-          cd apps/scoring
-          pip install -r requirements.txt
-      - name: Run pytest
-        run: |
-          cd apps/scoring
-          pytest tests/
+          cache: pip
+          cache-dependency-path: apps/scoring/requirements.txt
+      - run: pip install -r apps/scoring/requirements.txt
+      - run: python -m pytest tests/
+        working-directory: apps/scoring
+
+  containers:
+    name: Container build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: bash scripts/init-local-env.sh --apply
+      - run: docker compose config --quiet
+      - run: docker compose build

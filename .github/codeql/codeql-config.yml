@@ -1,0 +1,7 @@
+name: BingoBlitz security analysis
+queries:
+  - uses: security-extended
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/coverage/**'
