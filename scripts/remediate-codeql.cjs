@@ -82,34 +82,34 @@ async function runRemediation({ client, event, eventName, ref, enabled, wait = s
       if (!(await currentBase())) { notes.push(`Alert #${alert.number}: base moved after commit; branch retained, PR creation skipped.`); break; }
       const body = [
         `<!-- bingoblitz-autofix:alert=${alert.number};base=${sha} -->`,
-        '## GitHub Copilot Autofix proposal',
+        '## GitHub Copilot Autofix 資安弱點修復提案',
         '',
-        `- Finding: [CodeQL alert #${alert.number}](${githubUrl(client.repository, `security/code-scanning/${alert.number}`)})`,
-        `- Rule: ${safeText(alert.rule.id)}; severity: ${safeText(alert.rule.security_severity_level || alert.rule.severity)}`,
-        `- Location: ${safeText(SOURCE)}:${safeText(alert.most_recent_instance.location.start_line)}`,
-        `- Classification: ${safeText((alert.rule.tags || []).filter((tag) => /^external\/cwe\/cwe-\d+$/.test(tag)).join(', ') || 'CWE not supplied')}. Application weaknesses do not automatically have a CVE.`,
-        `- Analyzed base commit: ${sha}`,
-        `- Proposed repair commit: ${committed.sha}`,
-        `- Source analysis: ${githubUrl(client.repository, `actions/runs/${run.id}`)}`,
+        `- 發現弱點：[CodeQL Alert #${alert.number}](${githubUrl(client.repository, `security/code-scanning/${alert.number}`)})`,
+        `- 規則 (Rule)：${safeText(alert.rule.id)}；嚴重度：${safeText(alert.rule.security_severity_level || alert.rule.severity)}`,
+        `- 檔案位置：${safeText(SOURCE)}:${safeText(alert.most_recent_instance.location.start_line)}`,
+        `- 分類：${safeText((alert.rule.tags || []).filter((tag) => /^external\/cwe\/cwe-\d+$/.test(tag)).join(', ') || '未提供 CWE')}。應用程式程式碼缺陷通常無 CVE 編號。`,
+        `- 分析基準 Commit (Base)：${sha}`,
+        `- 提案修復 Commit：${committed.sha}`,
+        `- 來源分析 Run：${githubUrl(client.repository, `actions/runs/${run.id}`)}`,
         '',
-        '### What changed',
-        'The patch was generated and committed by the GitHub CodeQL Autofix API. Review the Files changed diff; no hand-written patch is represented as AI output.',
-        `GitHub Autofix explanation (untrusted generated text, not verification evidence): ${safeText(fix.description || 'No description supplied by GitHub.', 3500)}`,
+        '### 變更說明 (What changed)',
+        '本修補 Patch 由 GitHub CodeQL Autofix API 自動產生並提交。請點開「Files changed」檢視 Diff；此處絕不以手寫程式碼冒充 AI 產出。',
+        `GitHub Autofix 自動說明：${safeText(fix.description || 'GitHub 未提供說明。', 3500)}`,
         '',
-        '### Verification',
-        '**Patch proposed — not yet verified fixed.** CI and CodeQL will be explicitly dispatched because pushes/PRs made with GITHUB_TOKEN do not normally trigger those workflows. The security-report bot comment records current evidence.',
+        '### 驗證狀態 (Verification)',
+        '**修補已提出 — 尚未完成驗證 (Patch proposed — not yet verified fixed)。** 系統已主動派發 CI 與 CodeQL 重新分析（因 GITHUB_TOKEN 提交預設不觸發 Actions）。即時驗證進度請見下方的安全報告留言。',
         '',
-        '### Human review',
-        '- [ ] Review the patch and remaining findings.',
-        '- [ ] Confirm CI and CodeQL evidence applies to the current PR head.',
-        '- [ ] Mark ready and approve/merge only after the required checks are satisfied.',
+        '### 人工審查檢查清單 (Human review)',
+        '- [ ] 審查 Patch 內容與相關弱點 CWE。',
+        '- [ ] 確認 CI 與 CodeQL 驗證證據已套用於當前 PR Head。',
+        '- [ ] 待所有必要檢查通過後，由專案管理員手動核准並合併 (Approve and Merge)。',
         '',
-        'No automatic approval, merge, protection bypass, or deployment is performed.',
+        '本流程不會自動核准、不會自動合併、不會繞過保護，亦不會直接部署。',
         '',
         '🤖 Generated with [Claude Code](https://claude.com/claude-code)'
       ].join('\n');
       const pr = await client.request('POST', `${client.prefix}/pulls`, {
-        title: `fix: Copilot Autofix for ${alert.rule.id} (#${alert.number})`, head: branch, base: 'main', body, draft: true, maintainer_can_modify: false
+        title: `fix(security): Copilot Autofix 自動修復 ${alert.rule.id} (#${alert.number})`, head: branch, base: 'main', body, draft: true, maintainer_can_modify: false
       });
       open.items.push({ ...pr, head: { ref: branch }, body });
       notes.push(`Created draft PR #${pr.number} for alert #${alert.number}; patch proposed, human review required.`);
