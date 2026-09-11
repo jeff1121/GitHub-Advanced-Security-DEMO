@@ -4,6 +4,6 @@
   "private": true,
   "description": "Dependency review fixture; not a runtime workspace and never imported by the application",
   "dependencies": {
-    "lodash": "4.17.20"
+    "lodash": "4.18.1"
   }
 }
