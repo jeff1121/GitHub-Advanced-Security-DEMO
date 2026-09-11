@@ -30,6 +30,17 @@ async function buildReport(client, pr) {
   const dependencyDiff = validSha(pr.base.sha)
     ? await optionalList(client, `${client.prefix}/dependency-graph/compare/${pr.base.sha}...${sha}`)
     : { items: [], truncated: false, unavailable: 'Base SHA unavailable; dependency change comparison was not performed.' };
+  const advisoryIds = [...new Set(dependencyDiff.items.flatMap((item) =>
+    (item.vulnerabilities || []).map((entry) => entry.advisory_ghsa_id).filter(Boolean)))].slice(0, 10);
+  const cves = new Map();
+  if (typeof client.advisory === 'function') {
+    for (const id of advisoryIds) {
+      try {
+        const data = await client.advisory(id);
+        cves.set(id, data.withdrawn_at ? 'Withdrawn advisory' : (data.cve_id || 'No CVE assigned'));
+      } catch { cves.set(id, 'CVE lookup unavailable'); }
+    }
+  }
   const files = await client.list(`${client.prefix}/pulls/${pr.number}/files`, 1);
   const marker = AUTOFIX_MARKER.exec(pr.body || '');
   const target = marker ? Number(marker[1]) : null;
@@ -46,8 +57,11 @@ async function buildReport(client, pr) {
     ...codeRows(client.repository, alerts.items.slice(0, 30)), '',
     '### Dependency changes in this PR',
     dependencyDiff.unavailable || `${dependencyDiff.items.length} dependency change(s) returned; showing up to 20. GHSA identifiers below are from the dependency comparison API; CVEs are not invented when omitted.`,
-    '| Package | Change | Version | License | Advisory GHSA IDs |', '|---|---|---|---|---|',
-    ...dependencyDiff.items.slice(0, 20).map((item) => `| ${safeText(item.name)} | ${safeText(item.change_type)} | ${safeText(item.version)} | ${safeText(item.license)} | ${safeText((item.vulnerabilities || []).map((vulnerability) => vulnerability.advisory_ghsa_id).filter(Boolean).join(', ') || 'None supplied')} |`), '',
+    '| Package | Change | Version | License | Advisory GHSA IDs | CVE (public advisory lookup) |', '|---|---|---|---|---|---|',
+    ...dependencyDiff.items.slice(0, 20).map((item) => {
+      const ids = (item.vulnerabilities || []).map((entry) => entry.advisory_ghsa_id).filter(Boolean);
+      return `| ${safeText(item.name)} | ${safeText(item.change_type)} | ${safeText(item.version)} | ${safeText(item.license)} | ${safeText(ids.join(', ') || 'None supplied')} | ${safeText(ids.map((id) => cves.get(id) || 'Not looked up (limit 10)').join(', ') || 'Not applicable')} |`;
+    }), '',
     '### Dependency advisories (repository default-branch inventory)',
     '**These are repository-level Dependabot alerts, not necessarily introduced or fixed by this PR.** Dependency Review checks PR-specific differences separately.',
     dependencies.unavailable || `${dependencies.items.length} open dependency alert(s) returned; showing up to 20.`,

@@ -31,6 +31,10 @@ function createClient({ token, repository, fetchImpl = fetch }) {
     return text ? JSON.parse(text) : null;
   }
   async function list(route, limit = 3) {
+    if (route.includes('/dependabot/alerts')) {
+      const batch = await request('GET', `${route}${route.includes('?') ? '&' : '?'}per_page=100`);
+      return { items: Array.isArray(batch) ? batch : [], truncated: false };
+    }
     const items = [];
     for (let page = 1; page <= limit; page++) {
       const batch = await request('GET', `${route}${route.includes('?') ? '&' : '?'}per_page=100&page=${page}`);
@@ -40,7 +44,19 @@ function createClient({ token, repository, fetchImpl = fetch }) {
     }
     return { items, truncated: true };
   }
-  return { repository, prefix, request, list };
+  async function advisory(id) {
+    if (!/^GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/.test(id || '')) throw new Error('Invalid GHSA identifier');
+    const route = `/advisories/${id}`;
+    const response = await fetchImpl(`${API_ORIGIN}${route}`, {
+      method: 'GET', redirect: 'error', signal: AbortSignal.timeout(15000),
+      headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
+    });
+    if (!response.ok) throw new GitHubError(response.status, route);
+    const text = await response.text();
+    if (text.length > 200000) throw new Error('Advisory response exceeded safety limit');
+    return JSON.parse(text);
+  }
+  return { repository, prefix, request, list, advisory };
 }
 
 function safeText(value, limit = 600) {
@@ -64,7 +80,7 @@ async function trustedRun(client, event, workflowFile) {
 async function optionalList(client, route) {
   try { return { ...(await client.list(route)), unavailable: null }; }
   catch (error) {
-    if (error instanceof GitHubError && [403, 404, 422].includes(error.status)) return { items: [], truncated: false, unavailable: `Unavailable (HTTP ${error.status}); not evidence of zero findings.` };
+    if (error instanceof GitHubError && [400, 403, 404, 422].includes(error.status)) return { items: [], truncated: false, unavailable: `Unavailable (HTTP ${error.status}); not evidence of zero findings.` };
     throw error;
   }
 }
