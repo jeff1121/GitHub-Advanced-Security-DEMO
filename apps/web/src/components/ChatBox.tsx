@@ -71,7 +71,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
           onChange={(e) => setInput(e.target.value)}
           placeholder="發送訊息給同房玩家..."
           maxLength={100}
-          className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+          className="min-w-0 flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
         />
         <button
           type="submit"

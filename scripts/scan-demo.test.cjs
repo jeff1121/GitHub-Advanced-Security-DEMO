@@ -26,7 +26,7 @@ test('room welcome does not return executable user HTML', async (t) => {
   assert.equal(response.status, 200);
   const type = response.headers.get('content-type');
   const body = await response.text();
-  assert.ok(type.startsWith('text/plain') || !body.includes('<img'), 'Untrusted HTML must be escaped or sent as text');
+  assert.ok(type.startsWith('application/json') || type.startsWith('text/plain') || !body.includes('<img'), 'Untrusted HTML must be escaped or sent as text/JSON');
 });
 
 test('room directory rejects invalid search and does not expose database errors', async (t) => {

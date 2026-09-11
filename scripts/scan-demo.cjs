@@ -1,11 +1,12 @@
 const http = require('node:http');
 const express = require('express');
 const { Pool } = require('pg');
+const { rateLimit } = require('express-rate-limit');
 
 function createDirectory(db) {
   const app = express();
   app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
-  app.get('/rooms', async (req, res, next) => {
+  app.get('/rooms', rateLimit({ windowMs: 60000, limit: 30 }), async (req, res, next) => {
     if (typeof req.query.q !== 'string' || req.query.q.length > 80) {
       return res.status(400).json({ error: 'Supply q as a string up to 80 characters.' });
     }
@@ -21,7 +22,7 @@ function createDirectory(db) {
   });
   app.get('/welcome', (req, res) => {
     const nickname = typeof req.query.nickname === 'string' ? req.query.nickname.slice(0, 80) : 'Guest';
-    res.type('text/plain').send(`Welcome, ${nickname}`);
+    res.json({ message: `Welcome, ${nickname}` });
   });
   app.use((_error, _req, res, _next) => res.status(500).json({ error: 'Directory unavailable' }));
   return app;

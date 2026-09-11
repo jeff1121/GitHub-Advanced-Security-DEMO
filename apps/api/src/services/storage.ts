@@ -21,10 +21,11 @@ export async function saveBlob(buffer: Buffer) {
 }
 
 export async function getBlobPath(filename: string): Promise<string | null> {
-  if (!/^[a-f0-9-]{36}\.png$/.test(filename)) return null;
+  const basename = path.basename(filename);
+  if (basename !== filename || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.png$/.test(basename)) return null;
   try {
     const directory = await fs.realpath(config.BLOB_DIR);
-    const file = await fs.realpath(path.join(directory, filename));
+    const file = await fs.realpath(path.join(directory, basename));
     if (path.dirname(file) !== directory || !(await fs.stat(file)).isFile()) return null;
     return file;
   } catch { return null; }

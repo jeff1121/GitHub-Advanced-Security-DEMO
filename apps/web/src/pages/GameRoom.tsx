@@ -86,12 +86,12 @@ export function GameRoom() {
     {error && <p role="alert" className="p-3 rounded-xl bg-rose-950 text-rose-200">{error}</p>}
     {!state && <p>請先<Link className="underline" to={`/join?code=${code}`}>加入房間</Link>；既有玩家重新整理會恢復原卡片。</p>}
     {state && <>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="min-w-0 space-y-4">
           <BingoCard card={state.card} marked={state.marked} drawn={state.draws.map((draw) => draw.number)} onMarkNumber={(number) => void mark(number)} disabled={!connected || state.room.status !== 'playing'} />
           <button onClick={() => action('bingo:claim')} disabled={!bingo?.hasBingo || state.room.status !== 'playing'} className="w-full p-4 bg-amber-500 text-slate-950 rounded-xl font-bold disabled:opacity-40">喊 BINGO！</button>
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <NumberCaller currentDraw={state.draws.at(-1)} recentDraws={state.draws} isHost={host} gameStatus={state.room.status} onStartGame={() => action('game:start')} onManualDraw={() => action('game:draw')} />
           <ChatBox messages={state.messages} onSendMessage={(body) => action('chat:send', { body })} currentUserId={player?.id} />
         </div>

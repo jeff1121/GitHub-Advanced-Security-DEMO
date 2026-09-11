@@ -13,8 +13,10 @@ function git(...parameters) {
 }
 function regularFile(relative) {
   const absolute = path.join(root, relative);
-  if (fs.existsSync(absolute) && !fs.lstatSync(absolute).isFile()) {
-    throw new Error(`Refusing non-regular file: ${relative}`);
+  try {
+    if (!fs.lstatSync(absolute).isFile()) throw new Error(`Refusing non-regular file: ${relative}`);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
   }
   return absolute;
 }
@@ -28,14 +30,16 @@ function reset() {
   const replacements = sourcePaths.map((relative) => {
     const content = git('show', `${sha}:${relative}`) + '\n';
     const target = regularFile(relative);
-    if (!fs.existsSync(target)) throw new Error(`Expected tracked file ${relative} does not exist; refusing.`);
+    fs.readFileSync(target, { flag: fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW });
     git('ls-files', '--error-unmatch', relative);
     return { target, content };
   });
   const session = regularFile(sessionPath);
-  if (fs.existsSync(session)) {
-    const previous = JSON.parse(fs.readFileSync(session, 'utf8'));
+  try {
+    const previous = JSON.parse(fs.readFileSync(session, { encoding: 'utf8', flag: fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW }));
     if (previous.createdBy !== 'bingoblitz-reset-demo') throw new Error('Session file was not created by this tool; refusing to overwrite it.');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
   }
   console.log(`Baseline: ${baseline} (${sha})`);
   console.log(`Restore only ${sourcePaths.join(', ')}; create a fresh session marker in ${sessionPath}.`);
@@ -44,10 +48,10 @@ function reset() {
     console.log('Dry run only. Review the baseline diff, then rerun with --apply.');
     return;
   }
-  for (const { target, content } of replacements) fs.writeFileSync(target, content);
+  for (const { target, content } of replacements) fs.writeFileSync(target, content, { flag: fs.constants.O_WRONLY | fs.constants.O_TRUNC | fs.constants.O_NOFOLLOW });
   fs.writeFileSync(session, JSON.stringify({
     createdBy: 'bingoblitz-reset-demo', sessionId: randomUUID(), baseline: sha, createdAt: new Date().toISOString()
-  }, null, 2) + '\n');
+  }, null, 2) + '\n', { flag: fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | fs.constants.O_NOFOLLOW });
   console.log('Prepared a new rehearsal. Inspect git diff, then:');
   console.log('git add scripts/scan-demo.cjs demo-dependencies/package.json demo-dependencies/package-lock.json docs/demo-session.json');
   console.log('git commit -m "demo: start a fresh security rehearsal"');

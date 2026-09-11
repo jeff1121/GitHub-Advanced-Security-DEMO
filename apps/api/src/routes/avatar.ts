@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import path from 'node:path';
+import { config } from '../config';
 import { z } from 'zod';
 import { saveBlob, getBlobPath } from '../services/storage';
 import { requireAuth, AuthRequest } from '../middleware/auth';
@@ -17,5 +19,5 @@ avatarRouter.get('/:file', asyncRoute(async (req, res) => {
   const file = await getBlobPath(req.params.file);
   if (!file) throw new AppError(404, 'Avatar not found');
   res.type('png').setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-  res.sendFile(file);
+  res.sendFile(path.basename(file), { root: config.BLOB_DIR, dotfiles: 'deny' });
 }));

@@ -48,7 +48,7 @@ services:
       dockerfile: apps/web/Dockerfile
     ports:
       - '127.0.0.1:8080:8080'
-    networks: [local]
+    networks: [local, ingress]
     depends_on:
       api: { condition: service_healthy }
     security_opt: [no-new-privileges:true]
@@ -63,6 +63,7 @@ services:
 networks:
   local:
     internal: true
+  ingress: {}
 volumes:
   postgres_data:
   blobs:
