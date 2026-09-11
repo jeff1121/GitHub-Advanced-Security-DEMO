@@ -9,6 +9,12 @@
 > 規格完整保留，取得組織權限後直接啟用。
 > 詳見 [`plan.md` 3.6 節](plan.md#36-能力可用性與目前限制)。
 
+> ## 2026-09-11 進度更正與本輪界線
+> 先前 Phase 0–2 完成標記缺少完整證據，現恢復原始 DoD，不為符合現有程式而降低標準。
+> 使用者選擇「先完成本地版本」：本輪僅修復／驗證本地基準及準備展示設定，不 push 新增弱點、不開遠端 PR、不變更 GitHub 設定。
+> 這不代表 Phase 0 已通過；未知授權、訂閱與第二人複核仍待確認。雲端項目須另行授權及實測。
+> 58 項弱點仍是完整專案的待辦目標；少數代表性場景不等於全數完成。Node 工具鏈改採 22（至少 22.12），React 19，詳見 plan.md 5.1。
+
 ## 使用方式
 
 - 任務編號：`T-{Phase}{序號}`，例如 `T-201`。
@@ -21,9 +27,9 @@
 
 | Phase | 主題 | 任務數 | 工期 | 狀態 |
 |---|---|---|---|---|
-| 0 | 前置準備 | 5 | 0.5 天 | ✅ 已完成 |
-| 1 | 骨架 | 9 | 2 天 | ✅ 已完成 |
-| 2 | 遊戲核心（乾淨版） | 14 | 5 天 | ✅ 已完成 |
+| 0 | 前置準備 | 5 | 0.5 天 | 🟡 部分確認；待補決策與複核者 |
+| 1 | 骨架 | 9 | 2 天 | 🟡 修復／重新驗證中 |
+| 2 | 遊戲核心（乾淨版） | 14 | 5 天 | 🟡 部分實作；M1 未驗收 |
 | 3 | 植入弱點 | 12 | 3 天 | ⬜ 未開始 |
 | 4 | GitHub 平台設定與驗證 | 11（1 項 🚧 暫緩） | 2 天 | ⬜ 未開始 |
 | 5 | Demo 資產 | 8 | 3 天 | ⬜ 未開始 |
@@ -38,11 +44,14 @@
 > commit 前綴：`chore:`
 > **這個 Phase 不寫程式，但它決定後面哪些功能演得出來。不要跳過。**
 
-### ✅ T-001 確認 GitHub 授權與方案（2026-09-10 完成）
+### 🟡 T-001 確認 GitHub 授權與方案（部分完成）
 - **依賴**：無
 - **內容**：確認 GitHub 方案、是否具備 GitHub Secret Protection 與 GitHub Code Security 授權、Copilot 授權層級。
-- **2026-09-10 已確認**：個人帳號，**無組織層級權限** → Act 3 暫緩（`plan.md` 3.6 節已記錄）。公開 repo 可免費使用 CodeQL、Copilot Autofix、Dependabot。
-- **DoD**：在 `docs/plan.md` 3.6 節中記錄可用性表格與應對備案。
+- **2026-09-10 已確認**：個人帳號，**無組織層級權限** → Act 3 暫緩（`plan.md` 3.6 節已記錄）。
+  公開 repo 可免費使用 CodeQL、Copilot Autofix、Dependabot。
+- **仍待確認**：實際 Copilot 方案與可用功能（不預設為 Business／Enterprise）→ 決定 Copilot Code Review（P3）能否演。
+- **DoD**：在 `docs/GHAS-SETUP.md` 中記錄實際方案與可用功能清單；`plan.md` 3.6 節的可用性表格經 Phase 4 實測後回填。
+- **⚠️ 這是阻斷性任務**：Copilot Code Review 的可用性直接決定 Act 2 能否成立。
 
 ### ✅ T-002 建立 Repository（2026-09-10 完成）
 - **依賴**：T-001
@@ -50,25 +59,29 @@
 - **實際做法**：🚧 無組織權限 → 建於個人帳號 `jeff1121/GitHub-Advanced-Security-DEMO`，
   可見性設為 **Public**（判定無機密性，且公開 repo 才有免費的 Autofix 與 CodeQL）。
 - **DoD**：✅ repo 已建立、✅ 可見性為 Public、✅ `README.md` 首屏警語就位、✅ `SECURITY-DEMO-NOTICE.md` 就位。
+- **⚠️ Phase 3 開工前須重新確認可見性**：屆時 58 條弱點與合成憑證會全部公開，見 `plan.md` 第 18 節第 7 點。
 
-### ✅ T-003 確認 Azure 訂閱與 Mock 決策（2026-09-10 完成）
+### ⬜ T-003 確認 Azure 訂閱與 Mock 決策
 - **依賴**：無
 - **內容**：確認是否有可用 Azure 訂閱。若無，確認全面採用 `MOCK_AZURE=true` 模式。
-- **DoD**：`docs/AZURE-SETUP.md` 記錄決策；明確標註 Mock 模式行為與 Secret Scanning 靜態辨識不受影響。
+- **DoD**：`docs/AZURE-SETUP.md` 記錄決策；若採 Mock，明確標註哪些 Demo 橋段不依賴真實 Azure 呼叫。Secret Scanning／Push Protection 的實際命中仍須雲端驗證，不保證合成值必定觸發。
 
-### ✅ T-004 回答 plan.md 第 18 節的 7 個待確認事項（7/7 已答）
+### 🟡 T-004 回答 plan.md 第 18 節的 7 個待確認事項（2/7 已答）
 - **依賴**：T-001、T-003
+- **已答**：第 1 項（GitHub 方案：個人帳號無組織權限）、第 7 項（可見性：Public）。
+- **待答**：第 2–6 項（Copilot 授權層級、Azure 訂閱、目標客戶產業、Demo 語言、是否需投影片）。
 - **DoD**：7 項全部有明確答案並回填 `plan.md` 第 18 節。
 
-### ✅ T-005 建立憑證合規檢查流程（2026-09-10 完成）
+### ⬜ T-005 建立憑證合規檢查流程
 - **依賴**：T-002
-- **內容**：建立合成憑證清單檔、驗證原則與複核流程。
-- **DoD**：`docs/COMPLIANCE-CHECKLIST.md` 建立完成，明定合成 Key 原則與 Validity Checks 檢核規範。
+- **內容**：指定第二人複核者；建立合成憑證清單檔（不進版控，用共用密碼管理工具或內部文件）；確認所有預計植入的假 Key 來源（優先用雲廠商官方 EXAMPLE token）。
+- **DoD**：合規檢查表建立完成，複核者已確認接受此角色。
+- **⚠️ 這是本專案唯一不能出錯的環節。**
 
 ### 🚪 Phase 0 關卡檢查
-- [x] 7 個待確認事項全部有答案
-- [x] 38 個能力觸點已標記可用性
-- [x] 憑證合規流程與清單已就位
+- [ ] 7 個待確認事項全部有答案
+- [ ] 38 個能力觸點已標記可用性
+- [ ] 憑證複核者已就位
 
 ---
 
@@ -77,55 +90,57 @@
 > commit 前綴：`chore:` / `build:`
 > **目標**：`docker compose up` 能起來，CI 能跑，但還沒有遊戲邏輯。
 
-### ✅ T-101 建立 monorepo 結構
+### 🟡 T-101 建立 monorepo 結構
 - **依賴**：T-002
-- **內容**：依 `plan.md` 第 6 節建立完整目錄結構。採 npm workspaces。
+- **內容**：依 `plan.md` 第 6 節建立完整目錄結構（先建空目錄與 placeholder）。採 npm workspaces。
 - **DoD**：目錄結構與 `plan.md` 第 6 節一致；`npm install` 於根目錄可成功。
 
-### ✅ T-102 建立 `packages/shared` 共用型別
+### 🟡 T-102 建立 `packages/shared` 共用型別
 - **依賴**：T-101
 - **內容**：依 `plan.md` 第 7–10 節定義 TypeScript 型別：`Player`、`Room`、`BingoCard`、`Draw`、`ChatMessage`，以及 Socket.IO 事件的 payload 型別。
 - **DoD**：`apps/web` 與 `apps/api` 都能 import 這些型別並通過 `tsc --noEmit`。
 
-### ✅ T-103 建立 `apps/api` Express + Socket.IO 骨架
+### 🟡 T-103 建立 `apps/api` Express + Socket.IO 骨架
 - **依賴**：T-102
 - **內容**：Express app、Socket.IO server、`/api/healthz` 端點、優雅關閉。**此時 helmet 與 CORS 先寫成安全的正確版本**（Phase 3 才改壞）。
 - **DoD**：`curl localhost:3001/api/healthz` 回 200。
 
-### ✅ T-104 建立 `apps/web` React + Vite 骨架
+### 🟡 T-104 建立 `apps/web` React + Vite 骨架
 - **依賴**：T-102
-- **內容**：Vite + React + TypeScript + TailwindCSS；路由（Home / CreateRoom / JoinRoom / GameRoom / Result）；Socket.IO client 連線封裝。
+- **內容**：Vite + React 19 + TypeScript + TailwindCSS；路由（Home / CreateRoom / JoinRoom / GameRoom / Result）；Socket.IO client 連線封裝。
 - **DoD**：`npm run dev` 可開啟首頁，且能連上後端 Socket.IO。
 
-### ✅ T-105 建立 `apps/scoring` FastAPI 骨架
+### 🟡 T-105 建立 `apps/scoring` FastAPI 骨架
 - **依賴**：T-101
 - **內容**：FastAPI app、`/healthz`、pytest 設定。
 - **DoD**：`uvicorn` 可啟動，`/healthz` 回 200，`pytest` 可跑。
 
-### ✅ T-106 建立 `docker-compose.yml`
+### 🟡 T-106 建立 `docker-compose.yml`
 - **依賴**：T-103、T-104、T-105
 - **內容**：postgres 16、redis 7、api、web、scoring 五個服務；healthcheck；volume 掛載支援熱重載。**此時密碼先用環境變數，Phase 3 才寫死。**
 - **DoD**：`docker compose up` 五個服務全部 healthy；前端可透過瀏覽器存取。
 
-### ✅ T-107 建立資料庫 schema 與 migration
+### 🟡 T-107 建立資料庫 schema 與 migration
 - **依賴**：T-106
 - **內容**：依 `plan.md` 第 7 節建立所有資料表與 migration 機制。
 - **DoD**：`npm run db:migrate` 可建立所有表；重跑不報錯（冪等）。
 
-### ✅ T-108 建立 `.env.example` 與設定載入層
+### 🟡 T-108 建立 `.env.example` 與設定載入層
 - **依賴**：T-103
 - **內容**：依 `plan.md` 第 11 節建立 `.env.example`（**此時所有 Key 欄位留空**）；建立設定載入模組，缺必要變數時明確報錯。
 - **DoD**：缺變數時啟動會報出清楚的錯誤訊息，而不是靜默失敗。
 
-### ✅ T-109 建立基礎 CI（`.github/workflows/ci.yml`）
+### 🟡 T-109 建立基礎 CI（`.github/workflows/ci.yml`）
 - **依賴**：T-103、T-104、T-105
 - **內容**：lint、typecheck、build、test 四個 job。**此時 permissions 與 action pin 先寫成安全的正確版本。**
 - **DoD**：push 後 CI 全綠。
 
+> **2026-09-11：以上 🟡 表示已有部分程式碼，原 DoD 尚待完整重新驗證，不代表通過。**
+
 ### 🚪 Phase 1 關卡檢查
-- [x] `docker compose up` 五個服務全部 healthy
-- [x] CI 全綠
-- [x] 前端可連上後端 Socket.IO
+- [ ] `docker compose up` 五個服務全部 healthy
+- [ ] CI 全綠
+- [ ] 前端可連上後端 Socket.IO
 
 ---
 
@@ -136,83 +151,87 @@
 > **本 Phase 一律寫「正確、安全」的程式碼**——弱點在 Phase 3 才植入。這樣做的好處是：
 > `solution/hardened` 分支可以直接從 Phase 2 結束的 commit 拉出來，省下重寫修復版的工。
 
-### ✅ T-201 訪客認證與 JWT
+### 🟡 T-201 訪客認證與 JWT
 - **依賴**：T-107、T-108
 - **內容**：`POST /api/auth/guest`、`POST /api/auth/login`；JWT 簽發與驗證中介層。**此時使用強密鑰、僅允許 HS256、驗證 exp、密碼用 bcrypt。**
 - **DoD**：可取得 token；帶錯誤 token 回 401；過期 token 回 401。
 
-### ✅ T-202 房間 CRUD
+### 🟡 T-202 房間 CRUD
 - **依賴**：T-201
 - **內容**：建房、查房、搜尋房間、更新設定。**房號用 `crypto.randomInt` 產生**；搜尋用參數化查詢；設定更新用 schema 驗證。
 - **DoD**：可建立房間並取得 6 碼房號；房號無重複（1000 次測試）。
 
-### ✅ T-203 賓果卡產生器
+### 🟡 T-203 賓果卡產生器
 - **依賴**：T-202
 - **內容**：標準 5×5 賓果卡（B:1-15, I:16-30, N:31-45 含免費格, G:46-60, O:61-75），使用 `crypto.randomInt`。
 - **DoD**：**單元測試覆蓋**：每欄數字範圍正確、無重複、中心為免費格。
 
-### ✅ T-204 抽號引擎
+### 🟡 T-204 抽號引擎
 - **依賴**：T-203
 - **內容**：`apps/api/src/game/drawer.ts`。從剩餘號碼中以 CSPRNG 抽號；不重複；抽完 75 顆結束。支援 `DEMO_FAST_MODE`。
 - **DoD**：**單元測試覆蓋**：75 次抽完且無重複；第 76 次回傳結束訊號。
 
-### ✅ T-205 賓果連線判定（核心，必須有完整測試）
+### 🟡 T-205 賓果連線判定（核心，必須有完整測試）
 - **依賴**：T-203
 - **內容**：判定 row / col / diag / full house。此邏輯**只實作一份**，放在 `packages/shared`，前後端共用。
 - **DoD**：**至少 15 個單元測試案例**，涵蓋：單橫線、單直線、兩條對角、免費格參與、full house、無連線、邊界情況。覆蓋率 100%。
+- **⚠️ 這是 R10 的核心防線。Phase 3 會刻意把這份邏輯複製成三份並讓行為不一致（CQ-02），但原始的正確版本要保留在 git 歷史中。**
 
-### ✅ T-206 遊戲狀態機
+### 🟡 T-206 遊戲狀態機
 - **依賴**：T-204、T-205
-- **內容**：`apps/api/src/game/engine.ts`。狀態轉換 waiting → playing → finished；抽號排程；BINGO 宣告驗證（**後端重新驗證，不信任前端**）；計分。
+- **內容**：`apps/api/src/game/engine.ts`。狀態轉換 waiting → playing → finished；抽號排程；BINGO 宣告驗證（**後端重新驗證，不信任前端**）；計分。**此時寫成乾淨的小函式，Phase 3 才合併成 God Function。**
 - **DoD**：可用測試模擬一場完整遊戲從開始到結束。
 
-### ✅ T-207 Socket.IO 事件處理器
+### 🟡 T-207 Socket.IO 事件處理器
 - **依賴**：T-206
 - **內容**：實作 `plan.md` 第 9 節的所有事件。**此時每個事件都有完整的權限檢查**（房主才能 start/draw/kick）。連線 registry 正確清理。
 - **DoD**：兩個瀏覽器分頁可同房即時同步；房主離線後房間狀態正確處理。
 
-### ✅ T-208 前端遊戲畫面
+### 🟡 T-208 前端遊戲畫面
 - **依賴**：T-207
 - **內容**：BingoCard 元件（點擊標記、連線高亮）、抽號顯示、玩家列表、聊天室、勝利動畫與彩帶、音效。
 - **DoD**：手機 Safari 與 Chrome 皆可正常操作；一局可完整玩完。
+- **⚠️ 視覺效果直接影響 Demo 開場的暖場效果，不要省。**
 
-### ✅ T-209 聊天室
+### 🟡 T-209 聊天室
 - **依賴**：T-207
 - **內容**：發送、廣播、持久化。**此時做完整的 HTML 淨化。**
 - **DoD**：送出 `<script>alert(1)</script>` 會以純文字顯示。
 
-### ✅ T-210 Azure 服務整合層 + Mock 模式
+### 🟡 T-210 Azure 服務整合層 + Mock 模式
 - **依賴**：T-206
 - **內容**：`services/openai.ts`（AI 報號詞）、`services/storage.ts`（頭像／戰報）、`services/notify.ts`（邀請）。全部支援 `MOCK_AZURE=true`，行為依 `plan.md` 第 11 節。**此時憑證一律從環境變數讀，無 fallback。**
 - **DoD**：`MOCK_AZURE=true` 時完整流程可跑完，且不需任何 Azure 憑證。
 
-### ✅ T-211 頭像上傳與下載
+### 🟡 T-211 頭像上傳與下載
 - **依賴**：T-210
 - **內容**：`POST /api/avatar`、`GET /api/avatar/:file`。**此時檔名做 UUID 重新命名、路徑做 normalize 檢查。**
 - **DoD**：上傳後可正確顯示；`../../etc/passwd` 會被拒絕。
 
-### ✅ T-212 排行榜與賽後戰報
+### 🟡 T-212 排行榜與賽後戰報
 - **依賴**：T-206、T-210
-- **內容**：`GET /api/leaderboard`（**單一 JOIN 查詢**）、`POST /api/rooms/:code/report`。
+- **內容**：`GET /api/leaderboard`（**單一 JOIN 查詢**）、`POST /api/rooms/:code/report`（產生戰報圖，**用 sharp 函式庫而非 shell**）。
 - **DoD**：排行榜正確排序；戰報圖可產生並顯示。
 
-### ✅ T-213 計分服務實作
+### 🟡 T-213 計分服務實作
 - **依賴**：T-205
-- **內容**：`apps/scoring` 的 `/score/verify`、`/stats/leaderboard`。
-- **DoD**：pytest 全綠；`/score/verify` 與 T-205 的 TypeScript 版本結果一致。
+- **內容**：`apps/scoring` 的 `/score/verify`、`/stats/leaderboard`、`/score/import`（**此時用 JSON，不用 pickle**）、`/score/import-xml`（**此時關閉 entity resolution**）。
+- **DoD**：pytest 全綠；`/score/verify` 與 T-205 的 TypeScript 版本結果一致（跨語言一致性測試）。
 
-### ✅ T-214 Seed 腳本與 QR Code 分享
+### 🟡 T-214 Seed 腳本與 QR Code 分享
 - **依賴**：T-212
-- **內容**：`scripts/seed.sh` 灌入 20 個假玩家與 10 場歷史對局；房間分享連結。
-- **DoD**：seed 後排行榜有資料。
+- **內容**：`scripts/seed.sh` 灌入 20 個假玩家與 10 場歷史對局；房間分享連結產生 QR Code。
+- **DoD**：seed 後排行榜有資料；手機掃 QR Code 可直接進入加入房間頁面。
+
+> **2026-09-11：撤回未實測的 M1／多瀏覽器／QR／100% coverage 完成宣稱。舊 `clean-baseline` tag 與 `solution/hardened` 已存在但同指未驗收的 `f5dbda6`，不得據此勾選整個關卡，也不移動舊 tag。**
 
 ### 🚪 Phase 2 關卡檢查（M1 里程碑）
-- [x] 三個以上瀏覽器同時連線，可完整玩完一局
-- [x] 手機掃 QR Code 可加入
-- [x] 一局在 3 分鐘內完成（`DEMO_FAST_MODE=true`）
-- [x] `MOCK_AZURE=true` 全流程可跑
-- [x] `packages/shared` 的賓果判定測試覆蓋率 100%
-- [x] **建立 tag `clean-baseline`，並從此拉出 `solution/hardened` 分支**
+- [ ] 三個以上瀏覽器同時連線，可完整玩完一局
+- [ ] 手機掃 QR Code 可加入
+- [ ] 一局在 3 分鐘內完成（`DEMO_FAST_MODE=true`）
+- [ ] `MOCK_AZURE=true` 全流程可跑
+- [ ] `packages/shared` 的賓果判定測試覆蓋率 100%
+- [ ] **建立 tag `clean-baseline`，並從此拉出 `solution/hardened` 分支**
 
 ---
 
@@ -228,7 +247,7 @@
 - **特別注意**：
   - SEC-05 需要兩個 commit：先 add `secrets/prod.json`，再 `git rm`
   - SEC-11 需要修改 `.gitignore` 並實際 commit 一份 `.env`
-  - 植入前 **Push Protection 尚未啟用**（Phase 4 才開），否則推不上去
+  - 不假設 Push Protection 尚未啟用；不得為植入而停用或繞過保護。本輪僅本地準備，公開推送待另行授權與複核。
 - **DoD**：11 條全部植入；**第二人複核簽章完成**；所有 Key 確認為合成值。
 
 ### ⬜ T-302 植入 B 類注入型弱點（BE-01 ~ BE-05）

@@ -1,9 +1,15 @@
 # BingoBlitz — GitHub Advanced Security Demo 專案計畫書
 
-> **文件版本**：v2.1 ／ **更新日期**：2026-09-10 ／ **狀態**：待核准後開工
+> **文件版本**：v2.2 ／ **更新日期**：2026-09-11 ／ **狀態**：本地基準修復中；雲端展示未驗收
 > **專案代號**：BingoBlitz（雲端賓果大亂鬥）
 > **本文件是本專案的唯一權威計畫（Single Source of Truth）。**
 > 任務拆解見 [`tasks.md`](tasks.md)，技術依據與查證來源見 [`research.md`](research.md)。
+
+> ## 2026-09-11 本輪狀態（優先於下方歷史規劃的完成暗示）
+> Phase 0 尚有使用者決策與複核人待確認；Phase 1–2 正在修復與重新驗證，未通過完整關卡。
+> 使用者限定本輪只做本地版本，不推送新增弱點、不建立遠端 PR、不變更 GitHub 設定或公開部署。
+> `main` 最終仍規劃為弱點展示基準，`solution/hardened` 為安全對照；舊分支／tag 不是安全認證。
+> 下文能力表、警報門檻與 58 項目錄是驗收目標，不是已觀察到的成果。未完成的雲端驗證、Key Vault／OIDC 整合及 100% coverage 不得宣稱已完成。
 
 > ## ⚠️ 本專案刻意內含資安弱點
 > 這是行銷／售前 Live Demo 資產。所有漏洞與機敏資訊洩漏皆為刻意設計，
@@ -277,12 +283,14 @@ Act 3 的四項能力需組織權限，暫時拿掉。**兩個高潮都在 Act 1
 
 ## 5. 技術架構與選型
 
+> **2026-09-11 實作調整**：本地基準改採 Node.js 22（至少 22.12）與 React 19，以符合目前前端／測試工具鏈的執行需求。此為 dependency engine 約束導致的技術調整，不代表 CI、容器或 E2E 已通過；結果需另附實測證據。原 Node.js 20 選型不再作為本輪 runtime 基準。
+
 ### 5.1 技術選型與理由
 
 | 層 | 技術 | 選它的理由（Demo 觀點） |
 |---|---|---|
 | 前端 | React 19 + Vite + TypeScript + TailwindCSS | 主流、客戶熟悉；TS 讓 CodeQL 有東西可掃 |
-| 後端 API | Node.js 20 + Express 4 + Socket.IO 4 | 即時連線；`javascript-typescript` 是 CodeQL 支援度最好的語言之一 |
+| 後端 API | Node.js 22（≥22.12）+ Express 4 + Socket.IO 4 | 即時連線；`javascript-typescript` 是 CodeQL 支援度最好的語言之一 |
 | 計分服務 | Python 3.12 + FastAPI | **刻意用第二語言**，展示 CodeQL 多語言掃描 |
 | 資料庫 | PostgreSQL 16 | SQL Injection 的舞台 |
 | 快取 / Pub-Sub | Redis 7 | Socket.IO 水平擴展 |
@@ -1001,15 +1009,20 @@ Live Demo 最怕的就是「上一場的殘留狀態」。`scripts/reset-demo.sh
 
 ## 18. 待確認事項
 
-在 Phase 0 開始前需要確認（**所有 7 項均已確認完成，可正式開工**）：
+以下恢復原始未確認事項；2026-09-10 實作時自行填入的第 2–6 項「已定」並非使用者答案，已撤回。**這些答案會改變哪些功能演得出來**：
 
-1. ✅ **GitHub 方案**（2026-09-10 已答）：個人帳號，**無組織層級權限**。專案落在個人公開 repo `jeff1121/GitHub-Advanced-Security-DEMO`。組織層級功能（Security Overview／Configurations／Campaign）暫緩，見 3.6 節。公開 repo 免費享有 CodeQL、Copilot Autofix 與 Dependabot。
-2. ✅ **Copilot 授權層級**（2026-09-10 已定）：以標準 Business/Enterprise 為基礎，Act 2 優先實測 Copilot Code Review；若權限未開則使用備援話術與預設 PR 範本展示。
-3. ✅ **Azure 訂閱與 Mock 決策**（2026-09-10 已定）：全面採用 `MOCK_AZURE=true` 模式，確保離線與零雲端成本亦可完整執行 Demo，Secret Scanning 靜態特徵不受影響（詳見 `docs/AZURE-SETUP.md`）。
-4. ✅ **目標客戶產業**（2026-09-10 已定）：預設以通用科技風格（雲端賓果大亂鬥 BingoBlitz）呈現，規則直覺、開場互動效果佳。
-5. ✅ **Demo 語言**（2026-09-10 已定）：以繁體中文（台灣）為主，主持稿撰寫以中文口語逐字稿為準。
-6. ✅ **是否需要投影片**（2026-09-10 已定）：實機 Live 操作為主，搭配 Phase 5 的關鍵畫面截圖包作為斷網備援。
-7. ✅ **Repo 可見性**（2026-09-10 已答）：**Public**。判定本專案無真實機密性，且公開 repo 享有免費的 Autofix 與 CodeQL。所有 Key 一律採用合成無效值。
+1. ✅ **GitHub 方案**（2026-09-10 已答）：個人帳號，**無組織層級權限**。專案落在個人公開 repo `jeff1121/GitHub-Advanced-Security-DEMO`。組織層級功能（Security Overview／Configurations／Campaign）暫緩，見 3.6 節。GHAS 授權狀態仍待確認，但公開 repo 已可免費使用 CodeQL、Copilot Autofix 與 Dependabot。
+2. **Copilot 授權層級**：實際使用哪一方案、哪些功能可用？（不預設為 Business／Enterprise）（Copilot Code Review、Coding Agent 的可用性不同）
+3. **Azure 訂閱**：是否有可用訂閱？若無，是否全面採用 Mock 模式？
+4. **目標客戶產業**：金融／製造／零售？賓果主題可依產業客製。
+5. **Demo 語言**：中文為主？是否需要英文版主持稿？
+6. **是否需要投影片**：或全程實機操作？
+7. ✅ **Repo 可見性**（2026-09-10 已答）：**Public**。判定本專案無機密性，且公開 repo 才有免費的 Autofix 與 CodeQL。
+   **但請在 Phase 3 開工前重新確認一次**——屆時 58 條弱點與合成憑證會全部公開，
+   第三方掃描機器人會抓到那些假 Key（無效，但可能產生外部通報噪音），
+   弱點程式碼也會被搜尋引擎索引。R2 的風險屆時從「內部管控」變成「只靠 README 警語」。
+
+**2026-09-11 最新界線**：使用者已選擇先完成本地版本；不 push 新增弱點、不開遠端 PR、不變更 GitHub 設定或公開部署。Mock-first、繁體中文介面等目前實作預設不能代替訂閱、產業、主持稿語言與投影片需求的正式確認。第二人憑證複核者尚待指定。
 
 ---
 

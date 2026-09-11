@@ -1,61 +1,34 @@
-# BingoBlitz — Azure 資源與 Mock 模式設定手冊 (AZURE-SETUP.md)
+# BingoBlitz — Azure 與 Mock 模式準備
 
-> 本文件記錄 BingoBlitz 的 Azure 整合架構、Mock 模式決策，以及若需串接真實 Azure 資源時的佈建規格。
-> 對應任務：**T-003**。
+> **2026-09-11：本地修復中；T-003 尚未完成。** Azure 訂閱是否可用仍待使用者確認。
+> 本輪僅準備本地版本，不部署 Azure、不提交真實憑證、不變更雲端設定。
 
----
+## 本地實作預設
 
-## 1. 核心決策：預設全面採用 Mock 模式
+`MOCK_AZURE=true` 是目前的本地開發預設，**不是「使用者已確認沒有 Azure 訂閱」的決策**。Mock 可降低本地遊戲對雲端網路與費用的依賴；全流程可玩性仍須實測。
 
-為了確保 Live Demo **零雲端費用、隨時隨地可離線展示、且免受雲端配額與網路延遲干擾**，本專案預設啟用：
-
-```bash
-MOCK_AZURE=true
-```
-
-### Mock 模式行為規格
-
-| 服務項目 | 在遊戲中的用途 | `MOCK_AZURE=true` 時的行為 |
+| 服務 | Mock 規格 | 尚待驗證／實作 |
 |---|---|---|
-| **Azure OpenAI** | AI 報號主持人、聊天室幽默評述 | 從預先撰寫的 20 句本地報號詞隨機挑選，模擬延遲 300ms 回傳 |
-| **Azure Blob Storage** | 玩家自訂頭像、賽後戰報圖儲存 | 存取本機磁碟 `./.data/blobs/` 目錄，提供靜態檔案服務 |
-| **Azure Web PubSub** | 即時抽號與房間訊息水平擴展 | 直接由本地 Node.js 內部 Socket.IO 伺服器進行房間廣播 |
-| **Azure Communication Services** | Email / SMS 邀請玩家 | 將信件與簡訊內容格式化輸出至後端 stdout / 終端機日誌 |
-| **Azure Key Vault** | `solution/hardened` 分支示範無密碼安全架構 | 在 Mock 模式下模擬安全取得憑證之介面 |
+| Azure OpenAI | 從本地 20 句報號詞選句 | 引擎確實使用報號服務、逾時與失敗處理 |
+| Blob Storage | 儲存於本機隔離的 `.data/blobs/` | 上傳格式、路徑防護、讀取及戰報流程 |
+| Web PubSub | 使用本地 Socket.IO 房間廣播 | 多用戶同步與重連；不代表雲端水平擴展已完成 |
+| Communication Services | 本地模擬 Email／SMS，不實際寄送 | 邀請路由與輸入／速率限制 |
+| Key Vault | 尚未實作 | 不得將本地環境變數讀取描述為 Key Vault／OIDC 整合 |
 
-### 💡 重要說明：Secret Scanning 與 Push Protection 完全不受 Mock 影響！
-GitHub Advanced Security 的 **Secret Scanning** 與 **Push Protection** 是在 Git 推送與提交歷史中，透過**字串正規表示式（Regex）、熵值分析（Entropy）與合作夥伴特徵碼**進行靜態辨識。
-因此，即使程式碼內部走 `MOCK_AZURE=true` 本機模擬邏輯，只要設定檔或程式碼中出現符合特徵的 Azure 連線字串或 Key（如 `DefaultEndpointsProtocol=https;AccountName=...` 或合成的 32 碼 OpenAI Key），**GitHub 依然會 100% 準確觸發 Push Protection 阻擋與 Secret Alert！**
+尚未完成的真實服務路徑應明確回報不支援，不能回傳假成功。`MOCK_AZURE=false` 不是已驗收的真實 Azure 部署方式。
 
----
+## 與 Secret Scanning／Push Protection 的關係
 
-## 2. 真實 Azure 資源佈建規格（選配）
+是否使用 Mock 與 GitHub 是否能辨識提交內容是兩個不同問題。本地程式不呼叫 Azure，仍可準備合成測試值，但**合成值不保證匹配 GitHub 支援的 pattern，也不保證觸發 Push Protection**。
 
-若未來有真實連線展示需求，可依下述規格透過 Azure CLI 或 Bicep 進行佈建：
+- GitHub 的偵測與攔截受 token 類型、支援的 pattern、功能設定與實際推送內容影響。
+- 不使用真實、已輪替或測試帳號的 Key 來換取「一定會被擋」的效果。
+- 在雲端測試獲得另行授權前，只能標記「待雲端驗證」。本地字串匹配不是 GitHub 攔截的證據。
+- 合成憑證來源與第二人複核流程見 [COMPLIANCE-CHECKLIST.md](COMPLIANCE-CHECKLIST.md)。
 
-### 2.1 必要資源清單
-1. **Azure OpenAI Service**:
-   - 模型部署：`gpt-4o-mini`
-   - Deployment Name：`gpt-4o-mini`
-2. **Azure Storage Account**:
-   - 類型：Standard General Purpose v2 (LRS)
-   - Blob 容器：`avatars`、`reports`
-3. **Azure Web PubSub**:
-   - 定價層：Free 或 Standard
-   - Hub 名稱：`bingo`
-4. **Azure Communication Services**:
-   - 啟用 Email 與電話 SMS 功能（選配）
-5. **Azure Key Vault**:
-   - 用於 `solution/hardened` 分支存放機敏設定
+## T-003 完成前需要的資料
 
-### 2.2 真實環境變數切換
-若切換為真實 Azure，僅需將 `.env` 的 `MOCK_AZURE` 設為 `false` 並填入對應連線參數：
-```bash
-MOCK_AZURE=false
-AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com/
-AZURE_OPENAI_API_KEY=<real-or-test-key>
-AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
-AZURE_WEBPUBSUB_CONNECTION_STRING=Endpoint=https://...;AccessKey=...
-ACS_CONNECTION_STRING=endpoint=https://...;accesskey=...
-AZURE_KEY_VAULT_URI=https://<your-vault>.vault.azure.net/
-```
+- [ ] 使用者確認 Azure 訂閱可用性與實際展示模式。
+- [ ] Mock 模式下完整多人遊戲已實測，記錄 commit 與測試結果。
+- [ ] 如需要真實 Azure，另行確認資源範圍、授權與費用；完成服務整合、設定驗證及隔離部署測試。
+- [ ] 將實際決策回填 `plan.md` 第 18 節，不以開發預設代替使用者答案。
