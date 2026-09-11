@@ -75,6 +75,7 @@ jobs:
           fi
           npm run db:migrate
           npm run test:integration
+          node --test scripts/scan-demo.sql.test.cjs
           bash scripts/seed.sh
           bash scripts/seed.sh
 

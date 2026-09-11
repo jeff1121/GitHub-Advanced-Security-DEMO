@@ -17,7 +17,10 @@ test('room directory binds search text as a SQL parameter', async (t) => {
   const response = await fetch(`${base}/rooms?q=${encodeURIComponent(input)}`);
   assert.equal(response.status, 200);
   assert.equal(captured[0].includes(input), false, 'User input must not become SQL syntax');
-  assert.deepEqual(captured[1], [`%${input}%`]);
+  assert.match(captured[0], /\$1/, 'The query must use a placeholder');
+  assert.ok(Array.isArray(captured[1]) && captured[1].length === 1);
+  assert.ok(captured[1][0] === input || captured[1][0] === `%${input}%`,
+    'Accept wildcard composition in SQL or in the bound value; never concatenate input into SQL');
 });
 
 test('room welcome does not return executable user HTML', async (t) => {
