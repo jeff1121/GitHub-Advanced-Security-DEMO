@@ -1,0 +1,37 @@
+name: PR Security Report
+
+on:
+  workflow_run:
+    workflows: [CI, CodeQL]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-report-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: github.event.workflow_run.head_repository.id == github.event.repository.id
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+      security-events: read
+      pull-requests: write
+    steps:
+      - name: Read trusted reporting code, never PR code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Publish current-head findings and remediation evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/security-report.cjs

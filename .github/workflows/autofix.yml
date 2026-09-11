@@ -1,0 +1,45 @@
+name: CodeQL Autofix PR
+
+on:
+  workflow_run:
+    workflows: [CodeQL]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-autofix-main
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    if: >-
+      vars.DEMO_AUTOFIX_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.id == github.event.repository.id))
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      security-events: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Read trusted orchestration code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Request native Autofix, open draft PR, dispatch verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEMO_AUTOFIX_ENABLED: ${{ vars.DEMO_AUTOFIX_ENABLED }}
+        run: node scripts/remediate-codeql.cjs

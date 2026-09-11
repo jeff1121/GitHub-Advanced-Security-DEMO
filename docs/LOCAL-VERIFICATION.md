@@ -1,6 +1,14 @@
 # 本地驗證紀錄
 
-日期：2026-09-11。此紀錄不代表 GitHub 雲端驗證，且不沿用舊版的完成宣稱。
+日期：2026-09-11。不沿用舊版的完成宣稱；本地與雲端結果分開記錄。使用者已追加授權雲端設定／驗收，並複核本次合成值生成方式。
+
+## 已完成的雲端驗證
+
+- Secret Scanning、Repo Push Protection、Dependabot Security Updates 已透過 API 啟用並讀回確認。
+- 已發布不含測試值的 `demo/act1-leak-key` 起點：`5ebbb43f303c6cc613e8fca43f0a72cbf8af90b2`。
+- 在独立測試副本，由本機亂數生成 Azure 格式 fixture（未使用任何既有憑證）。測試 commit `cc57565b892f25782ab81c749209b6580b75b88d` 的 push 連續三次被 GitHub 拒絕：`GH013`、`GITHUB PUSH PROTECTION`、`Azure Storage Account Access Key`，定位 `demo-fixtures/azure-sample.ts:4`。
+- **沒有 bypass，測試 commit 未被遠端接收。** 遠端 branch SHA 仍為 `5ebbb43`。此結果證明本次 Azure Storage 場景被擋，不代表 Azure OpenAI 格式也已驗證命中。
+- 被阻擋的 push 不會啟動該 commit 的 Actions。其他掃描與修復 PR 驗收另列，不以此成功取代。
 
 ## 已執行
 

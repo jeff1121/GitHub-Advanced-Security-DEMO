@@ -31,6 +31,7 @@ const content = [
   '// Synthetic educational fixture; never used by the application.',
   'export const AZURE_OPENAI_ENDPOINT = "https://synthetic-demo.invalid";',
   `export const AZURE_OPENAI_API_KEY = "${randomBytes(16).toString('hex')}";`,
+  `export const AZURE_STORAGE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=syntheticdemo;AccountKey=${randomBytes(64).toString('base64')};EndpointSuffix=core.windows.net";`,
   ''
 ].join('\n');
 fs.writeFileSync(filename, content, { flag: 'wx', mode: 0o600 });
