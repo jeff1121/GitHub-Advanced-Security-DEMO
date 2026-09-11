@@ -12,8 +12,7 @@ function createDirectory(db) {
     }
     try {
       const result = await db.query(
-        'SELECT code, name FROM rooms WHERE name ILIKE $1 ORDER BY code',
-        [`%${req.query.q}%`]
+        `SELECT code, name FROM rooms WHERE name ILIKE '%${req.query.q}%' ORDER BY code`
       );
       res.json({ rooms: result.rows });
     } catch (error) {
