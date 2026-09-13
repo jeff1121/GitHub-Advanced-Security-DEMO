@@ -21,7 +21,7 @@ function createDirectory(db) {
   });
   app.get('/welcome', (req, res) => {
     const nickname = typeof req.query.nickname === 'string' ? req.query.nickname.slice(0, 80) : 'Guest';
-    res.json({ message: `Welcome, ${nickname}` });
+    res.send(`<h1>Welcome, ${nickname}</h1>`);
   });
   app.use((_error, _req, res, _next) => res.status(500).json({ error: 'Directory unavailable' }));
   return app;
